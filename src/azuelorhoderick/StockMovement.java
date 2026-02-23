@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package azuelorhoderick;
 
 import azuelorhoderick.Screens.Dashboard;
@@ -15,9 +11,11 @@ import javax.swing.RowFilter;
 
 import java.awt.Desktop;
 import java.io.*;
-import java.io.IOException; // ✅ IMPORTANT
+import java.io.IOException;
+
 import java.sql.*;
 import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import org.apache.pdfbox.pdmodel.*;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
@@ -25,62 +23,59 @@ import org.apache.pdfbox.pdmodel.font.*;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 
-public class LowStock {
+
+
+public class StockMovement {
 
     private final Dashboard dashboard;
 
-    private JTextField lowStockSearch_txt;
-    private JButton lowStockrefresh_btn;
-    private JButton lowStockExportCSV_btn;
-    private JButton lowStockPdf_btn;
-    private JComboBox<String> categoryLowStock_cmb;
-    private JTable lowStock_tbl;
+    // Dashboard components (variable names from your UI)
+    private JButton refresh_btn5;
+    private JButton MovementExportCsv_btn;
+    private JButton pdfMovement_btn;
+    private JComboBox<String> movementType_txt;
+    private JTextField searchMovement_btn;
+    private JComboBox<String> categoryMovement_cmb;
+    private JTable stockMovement_tbl;
 
-    private DefaultTableModel lowStockModel;
+    private DefaultTableModel movementModel;
     private TableRowSorter<DefaultTableModel> sorter;
 
-    // ✅ prevents combo action firing while loading items
     private boolean loadingCategories = false;
 
-    public LowStock(Dashboard dashboard) {
+    public StockMovement(Dashboard dashboard) {
         this.dashboard = dashboard;
     }
-
-    // ✅ Silent refresh (NO popup) - use this after stock changes / login
+    
     public void refresh() {
-        loadCategoryCombo();
-        loadLowStockTable(false);
-    }
-
-    // ✅ User-triggered refresh (popup only if empty) - use this when user is viewing Low Stock page
-    public void refreshWithMessage() {
-        loadCategoryCombo();
-        loadLowStockTable(true);
-    }
+    loadCategoryCombo();
+    loadMovementTable(false);
+}
 
     public void init() {
-        lowStockSearch_txt     = dashboard.getLowStockSearchTxt();
-        lowStockrefresh_btn    = dashboard.getLowStockRefreshBtn();
-        lowStockExportCSV_btn  = dashboard.getLowStockExportCsvBtn();
-        lowStockPdf_btn        = dashboard.getLowStockPdfBtn();
-        categoryLowStock_cmb   = dashboard.getCategoryLowStockCmb();
-        lowStock_tbl           = dashboard.getLowStockTbl();
+        // ===== bind from Dashboard getters =====
+        refresh_btn5          = dashboard.getRefresh_btn5();
+        MovementExportCsv_btn = dashboard.getMovementExportCsv_btn();
+        pdfMovement_btn       = dashboard.getPdfMovement_btn();
+        movementType_txt      = dashboard.getMovementType_txt();
+        searchMovement_btn    = dashboard.getSearchMovement_btn();
+        categoryMovement_cmb  = dashboard.getCategoryMovement_cmb();
+        stockMovement_tbl     = dashboard.getStockMovement_tbl();
 
         setupTable();
         setupSearchFilter();
         setupActions();
 
-        // ✅ IMPORTANT: silent load so no popup on login
         loadCategoryCombo();
-        loadLowStockTable(false);
+        loadMovementTable(true);
     }
 
     // =========================
     // TABLE SETUP
     // =========================
     private void setupTable() {
-        lowStockModel = new DefaultTableModel(
-                new Object[]{"Product", "Category", "Current Stock", "Reorder Level", "Suggested Order Qty", "Supplier"}, 0
+        movementModel = new DefaultTableModel(
+                new Object[]{"Date", "Product", "Type", "Quantity", "Notes"}, 0
         ) {
             @Override
             public boolean isCellEditable(int row, int col) {
@@ -88,18 +83,18 @@ public class LowStock {
             }
         };
 
-        lowStock_tbl.setModel(lowStockModel);
-        lowStock_tbl.setRowHeight(28);
+        stockMovement_tbl.setModel(movementModel);
+        stockMovement_tbl.setRowHeight(28);
 
-        sorter = new TableRowSorter<>(lowStockModel);
-        lowStock_tbl.setRowSorter(sorter);
+        sorter = new TableRowSorter<>(movementModel);
+        stockMovement_tbl.setRowSorter(sorter);
     }
 
     // =========================
-    // LIVE SEARCH
+    // LIVE SEARCH (filters table as you type)
     // =========================
     private void setupSearchFilter() {
-        lowStockSearch_txt.getDocument().addDocumentListener(new DocumentListener() {
+        searchMovement_btn.getDocument().addDocumentListener(new DocumentListener() {
             @Override public void insertUpdate(DocumentEvent e) { applyFilter(); }
             @Override public void removeUpdate(DocumentEvent e) { applyFilter(); }
             @Override public void changedUpdate(DocumentEvent e) { applyFilter(); }
@@ -107,7 +102,7 @@ public class LowStock {
     }
 
     private void applyFilter() {
-        String text = lowStockSearch_txt.getText();
+        String text = searchMovement_btn.getText();
         if (text == null) text = "";
         text = text.trim();
 
@@ -115,47 +110,60 @@ public class LowStock {
             sorter.setRowFilter(null);
             return;
         }
-
         sorter.setRowFilter(RowFilter.regexFilter("(?i)" + PatternSafe.regex(text)));
     }
 
     // =========================
-    // BUTTONS + COMBO EVENTS
+    // ACTIONS
     // =========================
-    private void setupActions() {
+   private void setupActions() {
 
-        // ✅ When user changes category in Low Stock page:
-        // Choose: false (silent) or true (show popup if empty)
-        categoryLowStock_cmb.addActionListener(e -> {
-            if (!loadingCategories) loadLowStockTable(false); // change to true if you want message here
-        });
+    refresh_btn5.addActionListener(e -> {
+        // ✅ reset filters
+        searchMovement_btn.setText("");
 
-        // ✅ Refresh button should show message if empty (user is intentionally checking)
-        lowStockrefresh_btn.addActionListener(e -> {
-            loadCategoryCombo();
-            loadLowStockTable(true);
-        });
+        // movement type -> All
+        if (movementType_txt.getItemCount() > 0) {
+            movementType_txt.setSelectedItem("All");
+        }
 
-        lowStockExportCSV_btn.addActionListener(e -> exportTableToCSV(lowStock_tbl));
-        lowStockPdf_btn.addActionListener(e -> exportTableToPDF(lowStock_tbl));
-    }
+
+        // category -> All Categories
+        if (categoryMovement_cmb.getItemCount() > 0) {
+            categoryMovement_cmb.setSelectedItem("All Categories");
+        }
+
+        // reload lists + data
+        loadCategoryCombo();
+        loadMovementTable(false); // no popup on refresh
+    });
+
+    movementType_txt.addActionListener(e -> loadMovementTable(false));
+
+    categoryMovement_cmb.addActionListener(e -> {
+        if (!loadingCategories) loadMovementTable(false);
+    });
+
+    MovementExportCsv_btn.addActionListener(e -> exportTableToCSV(stockMovement_tbl));
+    pdfMovement_btn.addActionListener(e -> exportTableToPDF(stockMovement_tbl));
+}
 
     // =========================
-    // LOAD CATEGORIES
+    // LOAD CATEGORY COMBO
     // =========================
     private void loadCategoryCombo() {
         loadingCategories = true;
         try {
-            categoryLowStock_cmb.removeAllItems();
-            categoryLowStock_cmb.addItem("All Categories"); // or "ALL PRODUCTS" if that is your UI text
+            categoryMovement_cmb.removeAllItems();
+            categoryMovement_cmb.addItem("All Categories");
 
             String sql = "SELECT category_name FROM categories ORDER BY category_name ASC";
             try (Connection con = DBConnection.getConnection();
-                 PreparedStatement pst = con.prepareStatement(sql);
-                 ResultSet rs = pst.executeQuery()) {
+                 PreparedStatement ps = con.prepareStatement(sql);
+                 ResultSet rs = ps.executeQuery()) {
 
                 while (rs.next()) {
-                    categoryLowStock_cmb.addItem(rs.getString("category_name"));
+                    categoryMovement_cmb.addItem(rs.getString("category_name"));
                 }
             }
         } catch (Exception e) {
@@ -167,55 +175,58 @@ public class LowStock {
     }
 
     // =========================
-    // LOAD LOW STOCK TABLE
-    // Condition: inventory.current_stock < products.reorder_level
+    // LOAD MOVEMENTS TABLE (from inventory_movements)
     // =========================
-    private void loadLowStockTable(boolean showDialogIfEmpty) {
-        lowStockModel.setRowCount(0);
+    private void loadMovementTable(boolean showDialogIfEmpty) {
+        movementModel.setRowCount(0);
 
-        String selectedCategory = String.valueOf(categoryLowStock_cmb.getSelectedItem());
-        boolean isAll = isAllSelection(selectedCategory);
+        String selectedCategory = String.valueOf(categoryMovement_cmb.getSelectedItem());
+        boolean isAllCat = isAllSelection(selectedCategory);
 
+        String movementType = String.valueOf(movementType_txt.getSelectedItem());
+        boolean isAllType = (movementType == null
+           || movementType.trim().isEmpty()
+           || movementType.equalsIgnoreCase("All"));
+
+        
+
+        // Join to products + categories so we can filter and display product name
         String sql =
-                "SELECT p.product_name, c.category_name, " +
-                "       COALESCE(i.current_stock, 0) AS current_stock, " +
-                "       p.reorder_level, " +
-                "       COALESCE(s.supplier_name, '-') AS supplier_name " +
-                "FROM products p " +
-                "JOIN categories c ON c.category_id = p.category_id " +
-                "LEFT JOIN inventory i ON i.product_id = p.product_id " +
-                "LEFT JOIN suppliers s ON s.supplier_id = p.supplier_id " +
-                "WHERE p.reorder_level > 0 " +
-                "  AND COALESCE(i.current_stock, 0) < p.reorder_level " +
-                (isAll ? "" : "  AND c.category_name = ? ") +
-                "ORDER BY c.category_name ASC, p.product_name ASC";
+        "SELECT im.movement_date, p.product_name, im.movement_type, im.quantity, im.notes, c.category_name " +
+        "FROM inventory_movements im " +
+        "JOIN products p ON p.product_id = im.product_id " +
+        "JOIN categories c ON c.category_id = p.category_id " +
+        "WHERE 1=1 " +
+        (!isAllType ? " AND im.movement_type = ? " : "") +
+        (!isAllCat  ? " AND c.category_name = ? " : "") +
+        "ORDER BY im.movement_date DESC";
 
+        int paramIndex = 1;
         int rowsAdded = 0;
 
         try (Connection con = DBConnection.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
-            if (!isAll) {
-                ps.setString(1, selectedCategory);
-            }
+            if (!isAllType)     ps.setString(paramIndex++, movementType);
+            if (!isAllCat)      ps.setString(paramIndex++, selectedCategory);
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
+                    Timestamp moveDate = rs.getTimestamp("movement_date");
                     String product = rs.getString("product_name");
-                    String category = rs.getString("category_name");
-                    int currentStock = rs.getInt("current_stock");
-                    int reorderLevel = rs.getInt("reorder_level");
-                    String supplier = rs.getString("supplier_name");
+                    String type = rs.getString("movement_type");
+                    int qty = rs.getInt("quantity");
+                    String notes = rs.getString("notes");
+                    if (notes == null) notes = "";
 
-                    int suggestedOrder = Math.max(0, reorderLevel - currentStock);
+                    String dateText = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(moveDate);
 
-                    lowStockModel.addRow(new Object[]{
+                    movementModel.addRow(new Object[]{
+                            dateText,
                             product,
-                            category,
-                            currentStock,
-                            reorderLevel,
-                            suggestedOrder,
-                            supplier
+                            type,
+                            qty,
+                            notes
                     });
 
                     rowsAdded++;
@@ -224,21 +235,19 @@ public class LowStock {
 
             applyFilter();
 
-            // ✅ Popup only when you want it
             if (rowsAdded == 0 && showDialogIfEmpty) {
-                JOptionPane.showMessageDialog(dashboard,
-                        "No LOW STOCK items found for: " + (isAll ? "All Categories" : selectedCategory) +
-                        "\n\nLow stock condition:\ncurrent_stock < reorder_level");
+                JOptionPane.showMessageDialog(dashboard, "No stock movements found for the selected filters.");
             }
 
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(dashboard, "Low Stock Load Error: " + ex.getMessage());
+            JOptionPane.showMessageDialog(dashboard, "Stock Movement Load Error: " + ex.getMessage());
             ex.printStackTrace();
         }
     }
 
+   
     // =========================
-    // EXPORT CSV
+    // EXPORT CSV (what you see in table)
     // =========================
     private void exportTableToCSV(JTable table) {
         if (table.getRowCount() == 0) {
@@ -248,7 +257,7 @@ public class LowStock {
 
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle("Save CSV");
-        chooser.setSelectedFile(new File("low_stock_report.csv"));
+        chooser.setSelectedFile(new File("stock_movements_report.csv"));
 
         int result = chooser.showSaveDialog(dashboard);
         if (result != JFileChooser.APPROVE_OPTION) return;
@@ -295,7 +304,7 @@ public class LowStock {
     }
 
     // =========================
-    // PDF EXPORT
+    // EXPORT PDF (your style)
     // =========================
     private void exportTableToPDF(JTable table) {
         if (table.getRowCount() == 0) {
@@ -305,7 +314,7 @@ public class LowStock {
 
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle("Save PDF");
-        chooser.setSelectedFile(new File("low_stock_report.pdf"));
+        chooser.setSelectedFile(new File("stock_movements_report.pdf"));
 
         int result = chooser.showSaveDialog(dashboard);
         if (result != JFileChooser.APPROVE_OPTION) return;
@@ -342,15 +351,20 @@ public class LowStock {
             cs.beginText();
             cs.setFont(fontBold, titleSize);
             cs.newLineAtOffset(margin, yStart);
-            cs.showText("Low Stock Report");
+            cs.showText("Stock Movements Report");
             cs.endText();
 
             yStart -= 22;
 
-            String cat = String.valueOf(categoryLowStock_cmb.getSelectedItem());
-            String search = lowStockSearch_txt.getText().trim();
+            String cat = String.valueOf(categoryMovement_cmb.getSelectedItem());
+            String type = String.valueOf(movementType_txt.getSelectedItem());
 
-            String filterLine = "Category: " + cat + "   |   Search: " + (search.isEmpty() ? "-" : search);
+            
+            String search = searchMovement_btn.getText().trim();
+
+            String filterLine = "Category: " + cat +
+                    " | Type: " + type +
+                    " | Search: " + (search.isEmpty() ? "-" : search);
 
             cs.beginText();
             cs.setFont(font, 10);
@@ -386,7 +400,7 @@ public class LowStock {
                     cs.beginText();
                     cs.setFont(fontBold, 12);
                     cs.newLineAtOffset(margin, y);
-                    cs.showText("Low Stock Report (continued)");
+                    cs.showText("Stock Movements Report (continued)");
                     cs.endText();
 
                     y -= 18;
@@ -456,18 +470,20 @@ public class LowStock {
         if (s.length() > maxLen) return s.substring(0, maxLen - 3) + "...";
         return s;
     }
-
-    // ✅ helper for ALL selections
+    
+    
     private boolean isAllSelection(String s) {
-        if (s == null) return true;
-        s = s.trim();
+    if (s == null) return true;
+    s = s.trim();
+    return s.equalsIgnoreCase("All Categories")
+        || s.equalsIgnoreCase("ALL PRODUCTS")
+        || s.equalsIgnoreCase("All")
+        || s.equalsIgnoreCase("ALL");
+}
 
-        return s.equalsIgnoreCase("All Categories")
-            || s.equalsIgnoreCase("ALL PRODUCTS")
-            || s.equalsIgnoreCase("All")
-            || s.equalsIgnoreCase("ALL");
-    }
-
+    // =========================
+    // Regex helper
+    // =========================
     private static class PatternSafe {
         static String regex(String text) {
             return text.replace("\\", "\\\\")

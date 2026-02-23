@@ -127,23 +127,13 @@ public class InventoryStatus {
     }
 
     private void loadProductCombo() {
-        InventoryAllProduct_cmb.removeAllItems();
-        InventoryAllProduct_cmb.addItem("All Products");
+    InventoryAllProduct_cmb.removeAllItems();
 
-        String sql = "SELECT product_name FROM products ORDER BY product_name ASC";
-        try (Connection con = DBConnection.getConnection();
-             PreparedStatement pst = con.prepareStatement(sql);
-             ResultSet rs = pst.executeQuery()) {
-
-            while (rs.next()) {
-                InventoryAllProduct_cmb.addItem(rs.getString("product_name"));
-            }
-
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(dashboard, "Error loading products: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
+    InventoryAllProduct_cmb.addItem("All Products");
+    InventoryAllProduct_cmb.addItem("IN STOCK");
+    InventoryAllProduct_cmb.addItem("LOW STOCK");
+    InventoryAllProduct_cmb.addItem("OUT OF STOCK");
+}
 
     public void loadInventoryStatusTable() {
         DefaultTableModel model = (DefaultTableModel) inventoryStatus_tbl.getModel();
@@ -178,11 +168,18 @@ public class InventoryStatus {
             params.add(selectedCategory);
         }
 
-        // Filter by product
-        if (selectedProduct != null && !selectedProduct.equals("All Products")) {
-            sql.append(" AND p.product_name = ? ");
-            params.add(selectedProduct);
-        }
+        // Filter by status (using the same CASE logic)
+         if (selectedProduct != null && !selectedProduct.equals("All Products")) {
+
+         if (selectedProduct.equals("OUT OF STOCK")) {
+             sql.append(" AND COALESCE(i.current_stock,0) = 0 ");
+    } else if (selectedProduct.equals("LOW STOCK")) {
+             sql.append(" AND COALESCE(i.current_stock,0) > 0 ");
+             sql.append(" AND COALESCE(i.current_stock,0) <= p.reorder_level ");
+    } else if (selectedProduct.equals("IN STOCK")) {
+             sql.append(" AND COALESCE(i.current_stock,0) > p.reorder_level ");
+    }
+}
 
         // Live search
         if (!keyword.isEmpty()) {
@@ -334,7 +331,7 @@ public class InventoryStatus {
         String prod = String.valueOf(InventoryAllProduct_cmb.getSelectedItem());
         String search = InventoryStatSearch_txt.getText().trim();
 
-        String filterLine = "Category: " + cat + "   |   Product: " + prod + "   |   Search: " + (search.isEmpty() ? "-" : search);
+        String filterLine = "Category: " + cat + "   |   Status: " + prod + "   |   Search: " + (search.isEmpty() ? "-" : search);
 
         cs.beginText();
         cs.setFont(font, 10);

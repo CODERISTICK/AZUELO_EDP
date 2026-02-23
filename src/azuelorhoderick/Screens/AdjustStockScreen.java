@@ -175,6 +175,7 @@ public AdjustStockScreen(Dashboard dashboard) {
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setMaximumSize(new java.awt.Dimension(686, 530));
         setMinimumSize(new java.awt.Dimension(686, 530));
+        setUndecorated(true);
         setPreferredSize(new java.awt.Dimension(686, 560));
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 

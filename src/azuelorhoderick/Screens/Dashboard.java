@@ -14,10 +14,15 @@ import java.time.format.DateTimeFormatter;
 import javax.swing.Timer;
 
 import azuelorhoderick.DBConnection;
+import azuelorhoderick.LowStock;
 import java.awt.CardLayout;
 import java.sql.*;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 
 import javax.swing.event.DocumentEvent;
@@ -43,41 +48,81 @@ public class Dashboard extends javax.swing.JFrame {
    
    //edit
    private final java.awt.Color NAV_ACTIVE = new java.awt.Color(37, 99, 235);
-private final java.awt.Color NAV_DEFAULT = java.awt.Color.WHITE;
-private final java.awt.Color TEXT_ACTIVE = java.awt.Color.WHITE;
-private final java.awt.Color TEXT_DEFAULT = new java.awt.Color(40, 40, 40);
+   private final java.awt.Color NAV_DEFAULT = java.awt.Color.WHITE;
+   private final java.awt.Color TEXT_ACTIVE = java.awt.Color.WHITE;
+   private final java.awt.Color TEXT_DEFAULT = new java.awt.Color(40, 40, 40);
 
 
 
 
-private static final String CARD_INV_STATUS = "INVENTORY_STATUS";
-private static final String CARD_LOW_STOCK = "LOW_STOCK";
-private static final String CARD_MOVEMENTS = "STOCK_MOVEMENTS";
+   private static final String CARD_INV_STATUS = "INVENTORY_STATUS";
+   private static final String CARD_LOW_STOCK = "LOW_STOCK";
+   private static final String CARD_MOVEMENTS = "STOCK_MOVEMENTS";
 
-private CardLayout reportsCardLayout;
+   private CardLayout reportsCardLayout;
+   
+   
+   //
+   private azuelorhoderick.LowStock lowStockCtrl;
+   private azuelorhoderick.StockMovement stockMoveCtrl;
+
+   public void initReportsControllers() {
+       lowStockCtrl = new azuelorhoderick.LowStock(this);
+       lowStockCtrl.init();
+
+       stockMoveCtrl = new azuelorhoderick.StockMovement(this);
+       stockMoveCtrl.init();
+}
+
+   public void refreshReports() {
+       if (lowStockCtrl != null) lowStockCtrl.refresh();          // you will add this
+       if (stockMoveCtrl != null) stockMoveCtrl.refresh();        // you will add this
+}
 
 
 
 
 //for Inventory status
 // ===== Inventory Status Report getters =====
-public javax.swing.JComboBox<String> getInventoryCategoryCmb() { return inventoryCategory_cmb; }
-public javax.swing.JComboBox<String> getInventoryAllProductCmb() { return InventoryAllProduct_cmb; }
-public javax.swing.JTextField getInventorySearchTxt() { return InventoryStatSearch_txt; }
+   public javax.swing.JComboBox<String> getInventoryCategoryCmb() { return inventoryCategory_cmb; }
+   public javax.swing.JComboBox<String> getInventoryAllProductCmb() { return InventoryAllProduct_cmb; }
+   public javax.swing.JTextField getInventorySearchTxt() { return InventoryStatSearch_txt; }
 
-public javax.swing.JButton getInventoryRefreshBtn() { return inventoryRefresh_btn; }
-public javax.swing.JButton getInventoryExportCsvBtn() { return inventoryExportCSV_btn; }
-public javax.swing.JButton getInventoryPdfBtn() { return inventoryPdf_btn; }
+   public javax.swing.JButton getInventoryRefreshBtn() { return inventoryRefresh_btn; }
+   public javax.swing.JButton getInventoryExportCsvBtn() { return inventoryExportCSV_btn; }
+   public javax.swing.JButton getInventoryPdfBtn() { return inventoryPdf_btn; }
 
-public javax.swing.JTable getInventoryStatusTbl() { return inventoryStatus_tbl; }
-
-
+   public javax.swing.JTable getInventoryStatusTbl() { return inventoryStatus_tbl; }
 
 
 
-    /**
-     * Creates new form Dashboard
-     */
+  // for low stock
+    public JTextField getLowStockSearchTxt(){ return lowStockSearch_txt; }
+    public JButton getLowStockRefreshBtn(){ return lowStockrefresh_btn; }
+    public JButton getLowStockExportCsvBtn(){ return lowStockExportCSV_btn; }
+    public JButton getLowStockPdfBtn(){ return lowStockPdf_btn; }
+    public JComboBox<String> getCategoryLowStockCmb(){ return categoryLowStock_cmb; }
+    public JTable getLowStockTbl(){ return lowStock_tbl; }
+
+  
+     //stockmovementGetter
+   
+    public JButton getRefresh_btn5(){ return refresh_btn5; }
+    public JButton getMovementExportCsv_btn(){ return MovementExportCsv_btn; }
+    public JButton getPdfMovement_btn(){ return pdfMovement_btn; }
+    public JComboBox<String> getMovementType_txt(){ return movementType_txt; }
+    public JTextField getSearchMovement_btn(){ return searchMovement_btn; }
+    public JComboBox<String> getCategoryMovement_cmb(){ return categoryMovement_cmb; }
+    public JTable getStockMovement_tbl(){ return stockMovement_tbl; }
+    
+    
+    
+    //test for pos
+   public javax.swing.JPanel getPOSContainerPanel() {
+    return posControllerPanel;
+}
+
+   
     public Dashboard() {
         initComponents();
         startDateTimePH();
@@ -85,22 +130,25 @@ public javax.swing.JTable getInventoryStatusTbl() { return inventoryStatus_tbl; 
         loadUsersToTable();
         setupUserSearch();
         new azuelorhoderick.InventoryStatus(this).init();
-
+        new azuelorhoderick.LowStock(this).init();
+        new azuelorhoderick.StockMovement(this).init();
+        
 
         loadProductsToTable();          // ✅ add
         setupProductEditRule();
         loadInventoryToTable();
         
         // VERY IMPORTANT LINE
-    reportsCardLayout = new CardLayout();
-    reportsRightPanel.setLayout(reportsCardLayout);
+        reportsCardLayout = new CardLayout();
+        reportsRightPanel.setLayout(reportsCardLayout);
 
-    setupReportsPanels(); // create panels
-
-        
-
+        setupReportsPanels(); // create panels
+    
+        initReportsControllers();
+    
+   
     }
-
+    
     private void startDateTimePH() {
 
     ZoneId phZone = ZoneId.of("Asia/Manila");
@@ -132,6 +180,10 @@ public javax.swing.JTable getInventoryStatusTbl() { return inventoryStatus_tbl; 
      loadProductsToTable();          // ✅ add
      setupProductEditRule();
      loadInventoryToTable();
+     initReportsControllers();
+     new azuelorhoderick.InventoryStatus(this).init();
+     new azuelorhoderick.LowStock(this).init();
+     new azuelorhoderick.StockMovement(this).init();
      
      
        // VERY IMPORTANT LINE
@@ -395,12 +447,14 @@ public void loadProductsToTable() {
     String sql =
         "SELECT p.product_id, p.barcode, p.product_name, " +
         "       c.category_name AS category, " +
-        "       s.supplier_name AS supplier, " +   // ✅ NEW
+        "       s.supplier_name AS supplier, " +
         "       p.unit_of_measure, p.unit_price, p.cost_price, " +
-        "       p.stock_quantity, p.reorder_level, p.status, p.date_added " +
+        "       COALESCE(i.current_stock, 0) AS stock_quantity, " +  // ✅ USE INVENTORY STOCK
+        "       p.reorder_level, p.status, p.date_added " +
         "FROM products p " +
         "JOIN categories c ON p.category_id = c.category_id " +
-        "LEFT JOIN suppliers s ON p.supplier_id = s.supplier_id " + // ✅ NEW JOIN
+        "LEFT JOIN suppliers s ON p.supplier_id = s.supplier_id " +
+        "LEFT JOIN inventory i ON i.product_id = p.product_id " +     // ✅ JOIN INVENTORY
         "ORDER BY p.product_id ASC";
 
     try (Connection con = DBConnection.getConnection();
@@ -413,11 +467,11 @@ public void loadProductsToTable() {
                 rs.getString("barcode"),
                 rs.getString("product_name"),
                 rs.getString("category"),
-                rs.getString("supplier"),   // ✅ NEW COLUMN
+                rs.getString("supplier"),
                 rs.getString("unit_of_measure"),
                 rs.getBigDecimal("unit_price"),
                 rs.getBigDecimal("cost_price"),
-                rs.getInt("stock_quantity"),
+                rs.getInt("stock_quantity"),   // ✅ NOW REAL STOCK
                 rs.getInt("reorder_level"),
                 rs.getString("status"),
                 rs.getTimestamp("date_added")
@@ -554,17 +608,6 @@ public void loadProductsToTable() {
         stockMovements_btn = new javax.swing.JButton();
         jLabel9 = new javax.swing.JLabel();
         reportsRightPanel = new javax.swing.JPanel();
-        pnlLowStock = new javax.swing.JPanel();
-        jLabel13 = new javax.swing.JLabel();
-        jPanel12 = new javax.swing.JPanel();
-        jLabel14 = new javax.swing.JLabel();
-        lowStockSearch_txt = new javax.swing.JTextField();
-        lowStockPdf_btn = new javax.swing.JButton();
-        lowStockrefresh_btn = new javax.swing.JButton();
-        lowStockExportCSV_btn = new javax.swing.JButton();
-        allProductLowStock_cmb = new javax.swing.JComboBox<>();
-        jScrollPane5 = new javax.swing.JScrollPane();
-        lowStock_tbl = new javax.swing.JTable();
         pnlInventoryStatus = new javax.swing.JPanel();
         jPanel10 = new javax.swing.JPanel();
         jLabel11 = new javax.swing.JLabel();
@@ -578,23 +621,32 @@ public void loadProductsToTable() {
         inventoryStatus_tbl = new javax.swing.JTable();
         jLabel10 = new javax.swing.JLabel();
         InventoryAllProduct_cmb = new javax.swing.JComboBox<>();
+        pnlLowStock = new javax.swing.JPanel();
+        jLabel13 = new javax.swing.JLabel();
+        jPanel12 = new javax.swing.JPanel();
+        lowStockSearch_txt = new javax.swing.JTextField();
+        lowStockPdf_btn = new javax.swing.JButton();
+        lowStockrefresh_btn = new javax.swing.JButton();
+        lowStockExportCSV_btn = new javax.swing.JButton();
+        jLabel18 = new javax.swing.JLabel();
+        categoryLowStock_cmb = new javax.swing.JComboBox<>();
+        jScrollPane5 = new javax.swing.JScrollPane();
+        lowStock_tbl = new javax.swing.JTable();
+        jLabel14 = new javax.swing.JLabel();
         pnlStockMovements = new javax.swing.JPanel();
         jLabel15 = new javax.swing.JLabel();
         jPanel13 = new javax.swing.JPanel();
-        jLabel16 = new javax.swing.JLabel();
-        InventoryStatSearch_txt2 = new javax.swing.JTextField();
-        refresh_btn4 = new javax.swing.JButton();
+        pdfMovement_btn = new javax.swing.JButton();
         refresh_btn5 = new javax.swing.JButton();
-        refresh_btn6 = new javax.swing.JButton();
-        jLabel17 = new javax.swing.JLabel();
-        jLabel19 = new javax.swing.JLabel();
+        MovementExportCsv_btn = new javax.swing.JButton();
+        movementType_txt = new javax.swing.JComboBox<>();
+        jLabel21 = new javax.swing.JLabel();
         jLabel20 = new javax.swing.JLabel();
-        jDateChooser1 = new com.toedter.calendar.JDateChooser();
-        jDateChooser2 = new com.toedter.calendar.JDateChooser();
-        allProduct_cmb2 = new javax.swing.JComboBox<>();
+        categoryMovement_cmb = new javax.swing.JComboBox<>();
         jScrollPane6 = new javax.swing.JScrollPane();
-        inventoryStatus_tbl2 = new javax.swing.JTable();
-        allProduct_cmb3 = new javax.swing.JComboBox<>();
+        stockMovement_tbl = new javax.swing.JTable();
+        jLabel17 = new javax.swing.JLabel();
+        searchMovement_btn = new javax.swing.JTextField();
         inventoryPanel = new javax.swing.JPanel();
         jPanel8 = new javax.swing.JPanel();
         jLabel8 = new javax.swing.JLabel();
@@ -653,7 +705,7 @@ public void loadProductsToTable() {
 
         lblProducts.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
         lblProducts.setText("Products");
-        navProducts.add(lblProducts, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 40, -1, -1));
+        navProducts.add(lblProducts, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 50, -1, -1));
 
         lblProductIcon.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/products (1).png"))); // NOI18N
         lblProductIcon.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -666,9 +718,9 @@ public void loadProductsToTable() {
                 lblProductIconKeyPressed(evt);
             }
         });
-        navProducts.add(lblProductIcon, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 0, -1, -1));
+        navProducts.add(lblProductIcon, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 10, -1, -1));
 
-        dashboardNav.add(navProducts, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 20, 60, 60));
+        dashboardNav.add(navProducts, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, 80, 70));
 
         navInventory.setBackground(new java.awt.Color(255, 255, 255));
         navInventory.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
@@ -680,13 +732,13 @@ public void loadProductsToTable() {
         navInventory.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         lblInventoryIcon.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/inventory.png"))); // NOI18N
-        navInventory.add(lblInventoryIcon, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 0, -1, -1));
+        navInventory.add(lblInventoryIcon, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 10, -1, -1));
 
         lblInventory.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
         lblInventory.setText("Inventory");
-        navInventory.add(lblInventory, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 40, -1, -1));
+        navInventory.add(lblInventory, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 50, -1, -1));
 
-        dashboardNav.add(navInventory, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 20, 80, 60));
+        dashboardNav.add(navInventory, new org.netbeans.lib.awtextra.AbsoluteConstraints(90, 10, 80, 70));
 
         navStock.setBackground(new java.awt.Color(255, 255, 255));
         navStock.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
@@ -710,7 +762,7 @@ public void loadProductsToTable() {
         });
         navStock.add(lblStocksIcon, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 0, -1, -1));
 
-        dashboardNav.add(navStock, new org.netbeans.lib.awtextra.AbsoluteConstraints(250, 20, 70, 60));
+        dashboardNav.add(navStock, new org.netbeans.lib.awtextra.AbsoluteConstraints(540, 20, 80, 70));
 
         navReports.setBackground(new java.awt.Color(255, 255, 255));
         navReports.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
@@ -723,12 +775,12 @@ public void loadProductsToTable() {
 
         lblReports.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
         lblReports.setText("Reports");
-        navReports.add(lblReports, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 40, -1, -1));
+        navReports.add(lblReports, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 50, -1, -1));
 
         lblReportsIcon.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/report.png"))); // NOI18N
-        navReports.add(lblReportsIcon, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 0, -1, -1));
+        navReports.add(lblReportsIcon, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 10, -1, -1));
 
-        dashboardNav.add(navReports, new org.netbeans.lib.awtextra.AbsoluteConstraints(340, 20, 70, 60));
+        dashboardNav.add(navReports, new org.netbeans.lib.awtextra.AbsoluteConstraints(250, 10, 80, 70));
 
         navUsers.setBackground(new java.awt.Color(255, 255, 255));
         navUsers.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
@@ -741,13 +793,13 @@ public void loadProductsToTable() {
 
         lblUsers.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
         lblUsers.setText("Users");
-        navUsers.add(lblUsers, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 40, -1, -1));
+        navUsers.add(lblUsers, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 50, -1, -1));
 
         lblUsersIcon.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/avatar (2).png"))); // NOI18N
         lblUsersIcon.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
-        navUsers.add(lblUsersIcon, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 0, -1, -1));
+        navUsers.add(lblUsersIcon, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 10, -1, -1));
 
-        dashboardNav.add(navUsers, new org.netbeans.lib.awtextra.AbsoluteConstraints(540, 20, 60, 60));
+        dashboardNav.add(navUsers, new org.netbeans.lib.awtextra.AbsoluteConstraints(330, 10, 80, 70));
 
         navPosController.setBackground(new java.awt.Color(255, 255, 255));
         navPosController.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
@@ -760,12 +812,12 @@ public void loadProductsToTable() {
 
         lblPosController.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
         lblPosController.setText("POS ");
-        navPosController.add(lblPosController, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 40, -1, -1));
+        navPosController.add(lblPosController, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 50, 40, -1));
 
         lblPosControllerIcon.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/cashier.png"))); // NOI18N
-        navPosController.add(lblPosControllerIcon, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 0, -1, -1));
+        navPosController.add(lblPosControllerIcon, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 10, -1, -1));
 
-        dashboardNav.add(navPosController, new org.netbeans.lib.awtextra.AbsoluteConstraints(440, 20, 70, 60));
+        dashboardNav.add(navPosController, new org.netbeans.lib.awtextra.AbsoluteConstraints(170, 10, 80, 70));
 
         getContentPane().add(dashboardNav, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 70, 1360, 100));
 
@@ -876,85 +928,6 @@ public void loadProductsToTable() {
         reportsRightPanel.setForeground(new java.awt.Color(0, 0, 0));
         reportsRightPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
-        pnlLowStock.setBackground(new java.awt.Color(245, 247, 251));
-        pnlLowStock.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-
-        jLabel13.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
-        jLabel13.setForeground(new java.awt.Color(51, 51, 255));
-        jLabel13.setText("Low Stock Report");
-        pnlLowStock.add(jLabel13, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 15, -1, 30));
-
-        jPanel12.setBackground(new java.awt.Color(204, 204, 204));
-        jPanel12.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-
-        jLabel14.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jLabel14.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel14.setText("Search:");
-        jPanel12.add(jLabel14, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 10, 60, 30));
-
-        lowStockSearch_txt.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel12.add(lowStockSearch_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(70, 10, 470, 30));
-
-        lowStockPdf_btn.setBackground(new java.awt.Color(255, 255, 255));
-        lowStockPdf_btn.setForeground(new java.awt.Color(0, 0, 0));
-        lowStockPdf_btn.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/file (1).png"))); // NOI18N
-        lowStockPdf_btn.setIconTextGap(2);
-        jPanel12.add(lowStockPdf_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(1090, 10, 20, 30));
-
-        lowStockrefresh_btn.setBackground(new java.awt.Color(255, 255, 255));
-        lowStockrefresh_btn.setForeground(new java.awt.Color(0, 0, 0));
-        lowStockrefresh_btn.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/refresh.png"))); // NOI18N
-        lowStockrefresh_btn.setText("Refresh");
-        lowStockrefresh_btn.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
-        lowStockrefresh_btn.setIconTextGap(2);
-        jPanel12.add(lowStockrefresh_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(860, 10, 110, 30));
-
-        lowStockExportCSV_btn.setBackground(new java.awt.Color(255, 255, 255));
-        lowStockExportCSV_btn.setForeground(new java.awt.Color(0, 0, 0));
-        lowStockExportCSV_btn.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/export.png"))); // NOI18N
-        lowStockExportCSV_btn.setText("Export CSV");
-        lowStockExportCSV_btn.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
-        lowStockExportCSV_btn.setIconTextGap(2);
-        jPanel12.add(lowStockExportCSV_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(970, 10, 120, 30));
-
-        pnlLowStock.add(jPanel12, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 60, 1180, 50));
-
-        allProductLowStock_cmb.setBackground(new java.awt.Color(255, 255, 255));
-        allProductLowStock_cmb.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "ALL PRODUCTS", "LOW STOCK", "OUT OF STOCK", "IN STOCK" }));
-        pnlLowStock.add(allProductLowStock_cmb, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 120, 200, 30));
-
-        lowStock_tbl.setBackground(new java.awt.Color(255, 255, 255));
-        lowStock_tbl.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-
-            },
-            new String [] {
-                "Product", "Category", "Current Stock", "Reorder Level", "Suggested Order Qty", "Supplier"
-            }
-        ) {
-            boolean[] canEdit = new boolean [] {
-                false, false, false, false, false, false
-            };
-
-            public boolean isCellEditable(int rowIndex, int columnIndex) {
-                return canEdit [columnIndex];
-            }
-        });
-        jScrollPane5.setViewportView(lowStock_tbl);
-        if (lowStock_tbl.getColumnModel().getColumnCount() > 0) {
-            lowStock_tbl.getColumnModel().getColumn(0).setResizable(false);
-            lowStock_tbl.getColumnModel().getColumn(1).setResizable(false);
-            lowStock_tbl.getColumnModel().getColumn(2).setResizable(false);
-            lowStock_tbl.getColumnModel().getColumn(3).setResizable(false);
-            lowStock_tbl.getColumnModel().getColumn(4).setResizable(false);
-            lowStock_tbl.getColumnModel().getColumn(5).setResizable(false);
-            lowStock_tbl.getColumnModel().getColumn(5).setHeaderValue("Supplier");
-        }
-
-        pnlLowStock.add(jScrollPane5, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 160, 1150, 320));
-
-        reportsRightPanel.add(pnlLowStock, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1180, 500));
-
         pnlInventoryStatus.setBackground(new java.awt.Color(245, 247, 251));
         pnlInventoryStatus.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
@@ -1032,10 +1005,97 @@ public void loadProductsToTable() {
         pnlInventoryStatus.add(jLabel10, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 15, -1, 30));
 
         InventoryAllProduct_cmb.setBackground(new java.awt.Color(255, 255, 255));
-        InventoryAllProduct_cmb.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "ALL PRODUCTS", "LOW STOCK", "OUT OF STOCK", "IN STOCK" }));
         pnlInventoryStatus.add(InventoryAllProduct_cmb, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 130, 130, 30));
 
         reportsRightPanel.add(pnlInventoryStatus, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1180, 500));
+
+        pnlLowStock.setBackground(new java.awt.Color(245, 247, 251));
+        pnlLowStock.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jLabel13.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        jLabel13.setForeground(new java.awt.Color(51, 51, 255));
+        jLabel13.setText("Low Stock Report");
+        pnlLowStock.add(jLabel13, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 15, -1, 30));
+
+        jPanel12.setBackground(new java.awt.Color(204, 204, 204));
+        jPanel12.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        lowStockSearch_txt.setBackground(new java.awt.Color(255, 255, 255));
+        lowStockSearch_txt.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                lowStockSearch_txtActionPerformed(evt);
+            }
+        });
+        jPanel12.add(lowStockSearch_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(90, 10, 450, 30));
+
+        lowStockPdf_btn.setBackground(new java.awt.Color(255, 255, 255));
+        lowStockPdf_btn.setForeground(new java.awt.Color(0, 0, 0));
+        lowStockPdf_btn.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/file (1).png"))); // NOI18N
+        lowStockPdf_btn.setIconTextGap(2);
+        jPanel12.add(lowStockPdf_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(1090, 10, 20, 30));
+
+        lowStockrefresh_btn.setBackground(new java.awt.Color(255, 255, 255));
+        lowStockrefresh_btn.setForeground(new java.awt.Color(0, 0, 0));
+        lowStockrefresh_btn.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/refresh.png"))); // NOI18N
+        lowStockrefresh_btn.setText("Refresh");
+        lowStockrefresh_btn.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        lowStockrefresh_btn.setIconTextGap(2);
+        jPanel12.add(lowStockrefresh_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(860, 10, 110, 30));
+
+        lowStockExportCSV_btn.setBackground(new java.awt.Color(255, 255, 255));
+        lowStockExportCSV_btn.setForeground(new java.awt.Color(0, 0, 0));
+        lowStockExportCSV_btn.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/export.png"))); // NOI18N
+        lowStockExportCSV_btn.setText("Export CSV");
+        lowStockExportCSV_btn.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        lowStockExportCSV_btn.setIconTextGap(2);
+        jPanel12.add(lowStockExportCSV_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(970, 10, 120, 30));
+
+        jLabel18.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jLabel18.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel18.setText("Search:");
+        jPanel12.add(jLabel18, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 10, 60, 30));
+
+        pnlLowStock.add(jPanel12, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 60, 1180, 50));
+
+        categoryLowStock_cmb.setBackground(new java.awt.Color(255, 255, 255));
+        pnlLowStock.add(categoryLowStock_cmb, new org.netbeans.lib.awtextra.AbsoluteConstraints(90, 120, 450, 30));
+
+        lowStock_tbl.setBackground(new java.awt.Color(255, 255, 255));
+        lowStock_tbl.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+
+            },
+            new String [] {
+                "Product", "Category", "Current Stock", "Reorder Level", "Suggested Order Qty", "Supplier"
+            }
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false, false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        jScrollPane5.setViewportView(lowStock_tbl);
+        if (lowStock_tbl.getColumnModel().getColumnCount() > 0) {
+            lowStock_tbl.getColumnModel().getColumn(0).setResizable(false);
+            lowStock_tbl.getColumnModel().getColumn(1).setResizable(false);
+            lowStock_tbl.getColumnModel().getColumn(2).setResizable(false);
+            lowStock_tbl.getColumnModel().getColumn(3).setResizable(false);
+            lowStock_tbl.getColumnModel().getColumn(4).setResizable(false);
+            lowStock_tbl.getColumnModel().getColumn(5).setResizable(false);
+            lowStock_tbl.getColumnModel().getColumn(5).setHeaderValue("Supplier");
+        }
+
+        pnlLowStock.add(jScrollPane5, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 160, 1150, 320));
+
+        jLabel14.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jLabel14.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel14.setText("Category:");
+        pnlLowStock.add(jLabel14, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 120, 70, 30));
+
+        reportsRightPanel.add(pnlLowStock, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1180, 500));
 
         pnlStockMovements.setBackground(new java.awt.Color(245, 247, 251));
         pnlStockMovements.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
@@ -1048,19 +1108,11 @@ public void loadProductsToTable() {
         jPanel13.setBackground(new java.awt.Color(204, 204, 204));
         jPanel13.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
-        jLabel16.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jLabel16.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel16.setText("Date Range:");
-        jPanel13.add(jLabel16, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 10, 90, 30));
-
-        InventoryStatSearch_txt2.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel13.add(InventoryStatSearch_txt2, new org.netbeans.lib.awtextra.AbsoluteConstraints(600, 50, 570, 30));
-
-        refresh_btn4.setBackground(new java.awt.Color(255, 255, 255));
-        refresh_btn4.setForeground(new java.awt.Color(0, 0, 0));
-        refresh_btn4.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/file (1).png"))); // NOI18N
-        refresh_btn4.setIconTextGap(2);
-        jPanel13.add(refresh_btn4, new org.netbeans.lib.awtextra.AbsoluteConstraints(1130, 10, 20, 30));
+        pdfMovement_btn.setBackground(new java.awt.Color(255, 255, 255));
+        pdfMovement_btn.setForeground(new java.awt.Color(0, 0, 0));
+        pdfMovement_btn.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/file (1).png"))); // NOI18N
+        pdfMovement_btn.setIconTextGap(2);
+        jPanel13.add(pdfMovement_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(1130, 10, 20, 30));
 
         refresh_btn5.setBackground(new java.awt.Color(255, 255, 255));
         refresh_btn5.setForeground(new java.awt.Color(0, 0, 0));
@@ -1070,44 +1122,46 @@ public void loadProductsToTable() {
         refresh_btn5.setIconTextGap(2);
         jPanel13.add(refresh_btn5, new org.netbeans.lib.awtextra.AbsoluteConstraints(900, 10, 110, 30));
 
-        refresh_btn6.setBackground(new java.awt.Color(255, 255, 255));
-        refresh_btn6.setForeground(new java.awt.Color(0, 0, 0));
-        refresh_btn6.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/export.png"))); // NOI18N
-        refresh_btn6.setText("Export CSV");
-        refresh_btn6.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
-        refresh_btn6.setIconTextGap(2);
-        jPanel13.add(refresh_btn6, new org.netbeans.lib.awtextra.AbsoluteConstraints(1010, 10, 120, 30));
+        MovementExportCsv_btn.setBackground(new java.awt.Color(255, 255, 255));
+        MovementExportCsv_btn.setForeground(new java.awt.Color(0, 0, 0));
+        MovementExportCsv_btn.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/export.png"))); // NOI18N
+        MovementExportCsv_btn.setText("Export CSV");
+        MovementExportCsv_btn.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        MovementExportCsv_btn.setIconTextGap(2);
+        jPanel13.add(MovementExportCsv_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(1010, 10, 120, 30));
 
-        jLabel17.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jLabel17.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel17.setText("Search:");
-        jPanel13.add(jLabel17, new org.netbeans.lib.awtextra.AbsoluteConstraints(540, 50, 50, 30));
+        movementType_txt.setBackground(new java.awt.Color(255, 255, 255));
+        movementType_txt.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "All", "IN", "OUT" }));
+        movementType_txt.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                movementType_txtActionPerformed(evt);
+            }
+        });
+        jPanel13.add(movementType_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(450, 10, 180, 30));
 
-        jLabel19.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jLabel19.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel19.setText("To:");
-        jPanel13.add(jLabel19, new org.netbeans.lib.awtextra.AbsoluteConstraints(540, 10, 30, 30));
+        jLabel21.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jLabel21.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel21.setText("Movement Type:");
+        jPanel13.add(jLabel21, new org.netbeans.lib.awtextra.AbsoluteConstraints(330, 10, 110, 30));
 
         jLabel20.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jLabel20.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel20.setText("Movement Type:");
-        jPanel13.add(jLabel20, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 50, 130, 30));
-        jPanel13.add(jDateChooser1, new org.netbeans.lib.awtextra.AbsoluteConstraints(570, 10, 320, 30));
-        jPanel13.add(jDateChooser2, new org.netbeans.lib.awtextra.AbsoluteConstraints(150, 10, 370, 30));
+        jLabel20.setText("Category:");
+        jPanel13.add(jLabel20, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 10, 70, 30));
 
-        allProduct_cmb2.setBackground(new java.awt.Color(255, 255, 255));
-        allProduct_cmb2.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "ALL PRODUCTS", "LOW STOCK", "OUT OF STOCK", "IN STOCK" }));
-        allProduct_cmb2.addActionListener(new java.awt.event.ActionListener() {
+        categoryMovement_cmb.setBackground(new java.awt.Color(255, 255, 255));
+        categoryMovement_cmb.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "All CATEGORIES" }));
+        categoryMovement_cmb.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                allProduct_cmb2ActionPerformed(evt);
+                categoryMovement_cmbActionPerformed(evt);
             }
         });
-        jPanel13.add(allProduct_cmb2, new org.netbeans.lib.awtextra.AbsoluteConstraints(150, 50, 370, 30));
+        jPanel13.add(categoryMovement_cmb, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 10, 200, 30));
 
-        pnlStockMovements.add(jPanel13, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 60, 1180, 90));
+        pnlStockMovements.add(jPanel13, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 60, 1180, 60));
 
-        inventoryStatus_tbl2.setBackground(new java.awt.Color(255, 255, 255));
-        inventoryStatus_tbl2.setModel(new javax.swing.table.DefaultTableModel(
+        stockMovement_tbl.setBackground(new java.awt.Color(255, 255, 255));
+        stockMovement_tbl.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
 
             },
@@ -1123,25 +1177,24 @@ public void loadProductsToTable() {
                 return canEdit [columnIndex];
             }
         });
-        jScrollPane6.setViewportView(inventoryStatus_tbl2);
-        if (inventoryStatus_tbl2.getColumnModel().getColumnCount() > 0) {
-            inventoryStatus_tbl2.getColumnModel().getColumn(0).setResizable(false);
-            inventoryStatus_tbl2.getColumnModel().getColumn(1).setResizable(false);
-            inventoryStatus_tbl2.getColumnModel().getColumn(2).setResizable(false);
-            inventoryStatus_tbl2.getColumnModel().getColumn(3).setResizable(false);
-            inventoryStatus_tbl2.getColumnModel().getColumn(4).setResizable(false);
+        jScrollPane6.setViewportView(stockMovement_tbl);
+        if (stockMovement_tbl.getColumnModel().getColumnCount() > 0) {
+            stockMovement_tbl.getColumnModel().getColumn(0).setResizable(false);
+            stockMovement_tbl.getColumnModel().getColumn(1).setResizable(false);
+            stockMovement_tbl.getColumnModel().getColumn(2).setResizable(false);
+            stockMovement_tbl.getColumnModel().getColumn(3).setResizable(false);
+            stockMovement_tbl.getColumnModel().getColumn(4).setResizable(false);
         }
 
-        pnlStockMovements.add(jScrollPane6, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 200, 1150, 280));
+        pnlStockMovements.add(jScrollPane6, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 170, 1150, 310));
 
-        allProduct_cmb3.setBackground(new java.awt.Color(255, 255, 255));
-        allProduct_cmb3.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "ALL PRODUCTS", "LOW STOCK", "OUT OF STOCK", "IN STOCK" }));
-        allProduct_cmb3.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                allProduct_cmb3ActionPerformed(evt);
-            }
-        });
-        pnlStockMovements.add(allProduct_cmb3, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 160, 130, 30));
+        jLabel17.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jLabel17.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel17.setText("Search:");
+        pnlStockMovements.add(jLabel17, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 120, 50, 50));
+
+        searchMovement_btn.setBackground(new java.awt.Color(255, 255, 255));
+        pnlStockMovements.add(searchMovement_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 130, 530, 30));
 
         reportsRightPanel.add(pnlStockMovements, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1180, 500));
 
@@ -1501,6 +1554,9 @@ if (choice == JOptionPane.YES_OPTION) {
     private void navPosControllerMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_navPosControllerMouseClicked
         // TODO add your handling code here:
          showCard(CARD_POS);
+         new azuelorhoderick.POSController(this, 1).init();
+
+         
     }//GEN-LAST:event_navPosControllerMouseClicked
 
     private void navUsersMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_navUsersMouseClicked
@@ -1683,13 +1739,17 @@ if (choice == JOptionPane.YES_OPTION) {
          
     }//GEN-LAST:event_stockMovements_btnActionPerformed
 
-    private void allProduct_cmb2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_allProduct_cmb2ActionPerformed
+    private void movementType_txtActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_movementType_txtActionPerformed
         // TODO add your handling code here:
-    }//GEN-LAST:event_allProduct_cmb2ActionPerformed
+    }//GEN-LAST:event_movementType_txtActionPerformed
 
-    private void allProduct_cmb3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_allProduct_cmb3ActionPerformed
+    private void categoryMovement_cmbActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_categoryMovement_cmbActionPerformed
         // TODO add your handling code here:
-    }//GEN-LAST:event_allProduct_cmb3ActionPerformed
+    }//GEN-LAST:event_categoryMovement_cmbActionPerformed
+
+    private void lowStockSearch_txtActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_lowStockSearch_txtActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_lowStockSearch_txtActionPerformed
 
     
     
@@ -1734,13 +1794,12 @@ if (choice == JOptionPane.YES_OPTION) {
     private javax.swing.JLabel Footer1;
     private javax.swing.JComboBox<String> InventoryAllProduct_cmb;
     private javax.swing.JTextField InventoryStatSearch_txt;
-    private javax.swing.JTextField InventoryStatSearch_txt2;
+    private javax.swing.JButton MovementExportCsv_btn;
     private javax.swing.JButton addProduct_btn;
     private javax.swing.JButton addUser_btn;
     private javax.swing.JButton adjustStock_btn;
-    private javax.swing.JComboBox<String> allProductLowStock_cmb;
-    private javax.swing.JComboBox<String> allProduct_cmb2;
-    private javax.swing.JComboBox<String> allProduct_cmb3;
+    private javax.swing.JComboBox<String> categoryLowStock_cmb;
+    private javax.swing.JComboBox<String> categoryMovement_cmb;
     private javax.swing.JButton changePass_btn;
     private javax.swing.JPanel dashboardNav;
     private javax.swing.JButton delete_btn;
@@ -1753,10 +1812,7 @@ if (choice == JOptionPane.YES_OPTION) {
     private javax.swing.JButton inventoryRefresh_btn;
     private javax.swing.JButton inventoryStatus_btn;
     private javax.swing.JTable inventoryStatus_tbl;
-    private javax.swing.JTable inventoryStatus_tbl2;
     private javax.swing.JTable inventory_tbl;
-    private com.toedter.calendar.JDateChooser jDateChooser1;
-    private com.toedter.calendar.JDateChooser jDateChooser2;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel11;
@@ -1764,11 +1820,11 @@ if (choice == JOptionPane.YES_OPTION) {
     private javax.swing.JLabel jLabel13;
     private javax.swing.JLabel jLabel14;
     private javax.swing.JLabel jLabel15;
-    private javax.swing.JLabel jLabel16;
     private javax.swing.JLabel jLabel17;
-    private javax.swing.JLabel jLabel19;
+    private javax.swing.JLabel jLabel18;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel20;
+    private javax.swing.JLabel jLabel21;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
@@ -1814,12 +1870,14 @@ if (choice == JOptionPane.YES_OPTION) {
     private javax.swing.JButton lowStock_btn;
     private javax.swing.JTable lowStock_tbl;
     private javax.swing.JButton lowStockrefresh_btn;
+    private javax.swing.JComboBox<String> movementType_txt;
     private javax.swing.JPanel navInventory;
     private javax.swing.JPanel navPosController;
     private javax.swing.JPanel navProducts;
     private javax.swing.JPanel navReports;
     private javax.swing.JPanel navStock;
     private javax.swing.JPanel navUsers;
+    private javax.swing.JButton pdfMovement_btn;
     private javax.swing.JPanel pnlInventoryStatus;
     private javax.swing.JPanel pnlLowStock;
     private javax.swing.JPanel pnlStockMovements;
@@ -1827,15 +1885,15 @@ if (choice == JOptionPane.YES_OPTION) {
     private javax.swing.JPanel productPanel;
     private javax.swing.JTable product_tbl;
     private javax.swing.JButton receiveStock_btn;
-    private javax.swing.JButton refresh_btn4;
     private javax.swing.JButton refresh_btn5;
-    private javax.swing.JButton refresh_btn6;
     private javax.swing.JPanel reportPanel;
     private javax.swing.JPanel reportsRightPanel;
     private javax.swing.JLabel role_lbl;
     private javax.swing.JTextField searchInventory_txt;
+    private javax.swing.JTextField searchMovement_btn;
     private javax.swing.JTextField searchName_txt;
     private javax.swing.JTextField search_txt;
+    private javax.swing.JTable stockMovement_tbl;
     private javax.swing.JButton stockMovements_btn;
     private javax.swing.JPanel stockPanel;
     private javax.swing.JLabel time_lbl;
