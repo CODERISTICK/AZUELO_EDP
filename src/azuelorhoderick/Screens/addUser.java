@@ -271,7 +271,7 @@ public class addUser extends javax.swing.JFrame {
 
         role_cmb.setBackground(new java.awt.Color(255, 255, 255));
         role_cmb.setForeground(new java.awt.Color(0, 0, 0));
-        role_cmb.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Admin", "Cashier", "Manager" }));
+        role_cmb.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Admin", "Cashier", "Inventory Staff" }));
         jPanel1.add(role_cmb, new org.netbeans.lib.awtextra.AbsoluteConstraints(90, 60, 180, 30));
 
         firstname_txt.setBackground(new java.awt.Color(255, 255, 255));
@@ -382,11 +382,12 @@ public class addUser extends javax.swing.JFrame {
 
     private void Register_btnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Register_btnActionPerformed
         // TODO add your handling code here:
-        String role = String.valueOf(role_cmb.getSelectedItem()).trim();
-    String status = String.valueOf(status_cmb.getSelectedItem()).trim();
+         String roleUI = String.valueOf(role_cmb.getSelectedItem()).trim();
+    String statusUI = String.valueOf(status_cmb.getSelectedItem()).trim();
 
-    // Convert "Not Active" to "Inactive" (to match DB ENUM)
-    if (status.equalsIgnoreCase("Not Active")) status = "Inactive";
+    // Normalize to DB ENUM values
+    String role = normalizeRoleForDB(roleUI);        // Admin / Cashier / Staff
+    String status = normalizeStatusForDB(statusUI);  // Active / Inactive
 
     String firstName = firstname_txt.getText().trim();
     String lastName  = lastname_txt.getText().trim();
@@ -395,10 +396,10 @@ public class addUser extends javax.swing.JFrame {
     String username  = username_txt.getText().trim();
     String password  = password_txt.getText().trim();
 
-    // DB format for DATETIME (MySQL): YYYY-MM-DD HH:MM:SS
-    ZoneId ph = ZoneId.of("Asia/Manila");
-    DateTimeFormatter dbFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    String nowDb = LocalDateTime.now(ph).format(dbFmt);
+    // MySQL DATETIME: yyyy-MM-dd HH:mm:ss
+    java.time.ZoneId ph = java.time.ZoneId.of("Asia/Manila");
+    java.time.format.DateTimeFormatter dbFmt = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    String nowDb = java.time.LocalDateTime.now(ph).format(dbFmt);
 
     try (Connection con = DBConnection.getConnection()) {
 
@@ -409,7 +410,7 @@ public class addUser extends javax.swing.JFrame {
                 return;
             }
 
-            // check duplicate username
+            // Check duplicate username
             String checkSql = "SELECT 1 FROM users WHERE username=? LIMIT 1";
             try (PreparedStatement pst = con.prepareStatement(checkSql)) {
                 pst.setString(1, username);
@@ -421,10 +422,6 @@ public class addUser extends javax.swing.JFrame {
                 }
             }
 
-            // IMPORTANT: role ENUM is Admin/Cashier/Manager (your DB)
-            // your combo has Admin/Cashier/Staff -> change Staff to Manager in UI, or map it:
-            if (role.equalsIgnoreCase("Staff")) role = "Manager";
-
             String insertSql =
                 "INSERT INTO users(first_name,last_name,username,password,role,email,contact_number,status,date_created) " +
                 "VALUES(?,?,?,?,?,?,?,?,?)";
@@ -433,8 +430,8 @@ public class addUser extends javax.swing.JFrame {
                 pst.setString(1, firstName);
                 pst.setString(2, lastName);
                 pst.setString(3, username);
-                pst.setString(4, password); // (later: hash)
-                pst.setString(5, role);
+                pst.setString(4, password); // TODO: hash later
+                pst.setString(5, role);     // ✅ now always Admin/Cashier/Staff
                 pst.setString(6, email.isEmpty() ? null : email);
                 pst.setString(7, contact.isEmpty() ? null : contact);
                 pst.setString(8, status);
@@ -454,9 +451,7 @@ public class addUser extends javax.swing.JFrame {
                 return;
             }
 
-            if (role.equalsIgnoreCase("Staff")) role = "Manager";
-
-            // check duplicate username except current user
+            // Check duplicate username except current user
             String checkSql = "SELECT 1 FROM users WHERE username=? AND user_id<>? LIMIT 1";
             try (PreparedStatement pst = con.prepareStatement(checkSql)) {
                 pst.setString(1, username);
@@ -470,21 +465,20 @@ public class addUser extends javax.swing.JFrame {
             }
 
             String updateSql =
-                    "UPDATE users SET first_name=?, last_name=?, role=?, email=?, contact_number=?, status=? " +
-                    "WHERE user_id=?";
-
+                "UPDATE users SET first_name=?, last_name=?, username=?, role=?, email=?, contact_number=?, status=? " +
+                "WHERE user_id=?";
 
             try (PreparedStatement pst = con.prepareStatement(updateSql)) {
-                  pst.setString(1, firstName);
-                  pst.setString(2, lastName);
-                  pst.setString(3, role);
-                  pst.setString(4, email.isEmpty() ? null : email);
-                  pst.setString(5, contact.isEmpty() ? null : contact);
-                  pst.setString(6, status);
-                  pst.setInt(7, userId);
-                  pst.executeUpdate();
-}
-
+                pst.setString(1, firstName);
+                pst.setString(2, lastName);
+                pst.setString(3, username);
+                pst.setString(4, role); // ✅ now always Admin/Cashier/Staff
+                pst.setString(5, email.isEmpty() ? null : email);
+                pst.setString(6, contact.isEmpty() ? null : contact);
+                pst.setString(7, status);
+                pst.setInt(8, userId);
+                pst.executeUpdate();
+            }
 
             JOptionPane.showMessageDialog(this, "User Updated Successfully!");
         }
@@ -496,29 +490,57 @@ public class addUser extends javax.swing.JFrame {
             if (username.isEmpty() || password.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Please enter username and new password.");
                 return;
-    }         
+            }
 
             String updateSql = "UPDATE users SET username=?, password=? WHERE user_id=?";
-                 try (PreparedStatement pst = con.prepareStatement(updateSql)) {
-                 pst.setString(1, username);
-                 pst.setString(2, password);
-                 pst.setInt(3, userId);
-                 pst.executeUpdate();
-}
-
+            try (PreparedStatement pst = con.prepareStatement(updateSql)) {
+                pst.setString(1, username);
+                pst.setString(2, password); // TODO: hash later
+                pst.setInt(3, userId);
+                pst.executeUpdate();
+            }
 
             JOptionPane.showMessageDialog(this, "Password Updated Successfully!");
         }
 
-        // refresh dashboard table
         if (dashboard != null) dashboard.loadUsersToTable();
-
         dispose();
 
     } catch (Exception e) {
         JOptionPane.showMessageDialog(this, "Database Error: " + e.getMessage());
         e.printStackTrace();
     }
+}
+
+// ✅ Map UI role labels -> DB ENUM values (Admin/Cashier/Staff)
+private String normalizeRoleForDB(String roleUI) {
+    if (roleUI == null) return "Staff";
+
+    String r = roleUI.trim();
+
+    // If your UI shows "Inventory Staff", DB must store "Staff"
+    if (r.equalsIgnoreCase("Inventory Staff")) return "Staff";
+
+    // If your UI shows "Staff", keep it
+    if (r.equalsIgnoreCase("Staff")) return "Staff";
+
+    if (r.equalsIgnoreCase("Admin")) return "Admin";
+    if (r.equalsIgnoreCase("Cashier")) return "Cashier";
+
+    // Fallback (avoid enum error)
+    return "Staff";
+}
+
+// ✅ Map UI status labels -> DB ENUM values
+private String normalizeStatusForDB(String statusUI) {
+    if (statusUI == null) return "Active";
+    String s = statusUI.trim();
+
+    if (s.equalsIgnoreCase("Not Active")) return "Inactive";
+    if (s.equalsIgnoreCase("Inactive")) return "Inactive";
+    if (s.equalsIgnoreCase("Active")) return "Active";
+
+    return "Active";
     }//GEN-LAST:event_Register_btnActionPerformed
 
     
