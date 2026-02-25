@@ -11,6 +11,8 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 
+import org.mindrot.jbcrypt.BCrypt;
+
 public class addUser extends javax.swing.JFrame {
 
     private Dashboard dashboard; // reference to dashboard
@@ -426,12 +428,15 @@ public class addUser extends javax.swing.JFrame {
                 "INSERT INTO users(first_name,last_name,username,password,role,email,contact_number,status,date_created) " +
                 "VALUES(?,?,?,?,?,?,?,?,?)";
 
+            // ✅ HASH password for ADD
+            String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+
             try (PreparedStatement pst = con.prepareStatement(insertSql)) {
                 pst.setString(1, firstName);
                 pst.setString(2, lastName);
                 pst.setString(3, username);
-                pst.setString(4, password); // TODO: hash later
-                pst.setString(5, role);     // ✅ now always Admin/Cashier/Staff
+                pst.setString(4, hashedPassword); // ✅ HASHED
+                pst.setString(5, role);
                 pst.setString(6, email.isEmpty() ? null : email);
                 pst.setString(7, contact.isEmpty() ? null : contact);
                 pst.setString(8, status);
@@ -472,7 +477,7 @@ public class addUser extends javax.swing.JFrame {
                 pst.setString(1, firstName);
                 pst.setString(2, lastName);
                 pst.setString(3, username);
-                pst.setString(4, role); // ✅ now always Admin/Cashier/Staff
+                pst.setString(4, role);
                 pst.setString(5, email.isEmpty() ? null : email);
                 pst.setString(6, contact.isEmpty() ? null : contact);
                 pst.setString(7, status);
@@ -493,9 +498,13 @@ public class addUser extends javax.swing.JFrame {
             }
 
             String updateSql = "UPDATE users SET username=?, password=? WHERE user_id=?";
+
+            // ✅ HASH password for CHANGE_PASSWORD
+            String newHashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+
             try (PreparedStatement pst = con.prepareStatement(updateSql)) {
                 pst.setString(1, username);
-                pst.setString(2, password); // TODO: hash later
+                pst.setString(2, newHashedPassword); // ✅ HASHED
                 pst.setInt(3, userId);
                 pst.executeUpdate();
             }

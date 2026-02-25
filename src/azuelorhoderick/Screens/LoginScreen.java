@@ -9,6 +9,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import javax.swing.JOptionPane;
+import org.mindrot.jbcrypt.BCrypt;
 
 public class LoginScreen extends javax.swing.JFrame {
 
@@ -113,7 +114,7 @@ public class LoginScreen extends javax.swing.JFrame {
 
     private void btn_LoginActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btn_LoginActionPerformed
          // TODO add your handling code here:
-          String username = Username.getText().trim();
+        String username = Username.getText().trim();
     String password = Password.getText().trim();
 
     if (username.isEmpty() || password.isEmpty()) {
@@ -121,23 +122,67 @@ public class LoginScreen extends javax.swing.JFrame {
         return;
     }
 
-    String sql = "SELECT CONCAT(first_name, ' ', last_name) AS fullname, role " +
-                 "FROM users WHERE username = ? AND password = ? AND status='Active' LIMIT 1";
+    String sql =
+        "SELECT user_id, CONCAT(first_name, ' ', last_name) AS fullname, role, password " +
+        "FROM users " +
+        "WHERE username = ? AND status='Active' " +
+        "LIMIT 1";
 
     try (Connection con = DBConnection.getConnection();
          PreparedStatement pst = con.prepareStatement(sql)) {
 
         pst.setString(1, username);
-        pst.setString(2, password);
 
         try (ResultSet rs = pst.executeQuery()) {
-            if (rs.next()) {
-                String fullName = rs.getString("fullname");
-                String role = rs.getString("role");
+            if (!rs.next()) {
+                JOptionPane.showMessageDialog(this, "Invalid Username or Password!");
+                Password.setText("");
+                Password.requestFocus();
+                return;
+            }
 
+            int userId = rs.getInt("user_id");
+            String fullName = rs.getString("fullname");
+            String role = rs.getString("role");
+            String dbPass = rs.getString("password"); // can be hash OR plain
+
+            boolean ok = false;
+
+            if (dbPass == null) dbPass = "";
+
+            // ---- Normalize bcrypt prefixes (fixes $2y$ / $2b$ issues) ----
+            String normalized = dbPass;
+            if (normalized.startsWith("$2y$") || normalized.startsWith("$2b$")) {
+                normalized = "$2a$" + normalized.substring(4);
+            }
+
+            // ---- Check if bcrypt format ----
+            if (normalized.startsWith("$2a$")) {
+                try {
+                    ok = org.mindrot.jbcrypt.BCrypt.checkpw(password, normalized);
+                } catch (IllegalArgumentException ex) {
+                    // still not a valid bcrypt string
+                    ok = false;
+                }
+            } else {
+                // ---- Not bcrypt: treat as plain text (OLD USERS) ----
+                ok = password.equals(dbPass);
+
+                // Auto-upgrade: if plain matched, convert to bcrypt now
+                if (ok) {
+                    String newHash = org.mindrot.jbcrypt.BCrypt.hashpw(password, org.mindrot.jbcrypt.BCrypt.gensalt());
+                    String upSql = "UPDATE users SET password=? WHERE user_id=?";
+                    try (PreparedStatement up = con.prepareStatement(upSql)) {
+                        up.setString(1, newHash);
+                        up.setInt(2, userId);
+                        up.executeUpdate();
+                    }
+                }
+            }
+
+            if (ok) {
                 JOptionPane.showMessageDialog(this, "Login Successful!");
-
-                Dashboard db = new Dashboard(fullName, role);
+                Dashboard db = new Dashboard(userId, fullName, role);
                 db.setVisible(true);
                 this.dispose();
             } else {
@@ -146,8 +191,9 @@ public class LoginScreen extends javax.swing.JFrame {
                 Password.requestFocus();
             }
         }
+
     } catch (Exception e) {
-        JOptionPane.showMessageDialog(this, "Database Connection Error: " + e.getMessage());
+        JOptionPane.showMessageDialog(this, "Login Error: " + e.getMessage());
         e.printStackTrace();
     }
     }//GEN-LAST:event_btn_LoginActionPerformed

@@ -29,15 +29,32 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 
+import azuelorhoderick.SlidePanelController;
+import javax.swing.JComponent;
+import javax.swing.SwingConstants;
 
+import azuelorhoderick.RBAC;
+import java.awt.Cursor;
 
 
 
 public class Dashboard extends javax.swing.JFrame {
     
     private java.awt.CardLayout cardLayout;
+    
+    private SlidePanelController notifController;
+    
+    private Connection conn;
+    
+    
+    private int userId;
+    private String userRole;
+    private String fullName;   // ✅ add this
+    
+    
 
 // Card names //edit
+    
    private static final String CARD_PRODUCTS = "PRODUCTS";
    private static final String CARD_INVENTORY = "INVENTORY";
    private static final String CARD_STOCK = "STOCK";
@@ -65,6 +82,10 @@ public class Dashboard extends javax.swing.JFrame {
    //
    private azuelorhoderick.LowStock lowStockCtrl;
    private azuelorhoderick.StockMovement stockMoveCtrl;
+   
+   //bell
+   private JLabel notifBadgeLbl;
+   private Timer notifBadgeTimer;
 
    public void initReportsControllers() {
        lowStockCtrl = new azuelorhoderick.LowStock(this);
@@ -134,6 +155,7 @@ public class Dashboard extends javax.swing.JFrame {
         new azuelorhoderick.StockMovement(this).init();
         
 
+        
         loadProductsToTable();          // ✅ add
         setupProductEditRule();
         loadInventoryToTable();
@@ -145,9 +167,78 @@ public class Dashboard extends javax.swing.JFrame {
         setupReportsPanels(); // create panels
     
         initReportsControllers();
+        
+        notifController = new SlidePanelController(this, userId, userRole, conn);
+        
+        initNotificationBadgeUI();
+        refreshNotifBadge();
+        startNotifBadgeAutoRefresh();;
     
    
     }
+    
+    
+    public Dashboard(int userId, String fullName, String role) {
+    initComponents();
+
+    this.userId = userId;
+    this.fullName = fullName;
+    this.userRole = role; // keep your existing variable name
+    
+    applyProductWriteRBAC();
+
+    startDateTimePH();
+    setupCards();
+
+    initDbConn(); // make sure conn exists early
+
+    // your existing init calls
+    loadUsersToTable();
+    setupUserSearch();
+
+    new azuelorhoderick.InventoryStatus(this).init();
+    new azuelorhoderick.LowStock(this).init();
+    new azuelorhoderick.StockMovement(this).init();
+
+    loadProductsToTable();
+    setupProductEditRule();
+    loadInventoryToTable();
+
+    reportsCardLayout = new CardLayout();
+    reportsRightPanel.setLayout(reportsCardLayout);
+    setupReportsPanels();
+    initReportsControllers();
+
+    // ✅ RBAC apply
+    applyRBAC();
+
+    // notifications (ONLY after conn + userId + role are set)
+    initNotificationBadgeUI();
+    refreshNotifBadge();
+    startNotifBadgeAutoRefresh();
+
+    if (conn != null) {
+        notifController = new SlidePanelController(this, this.userId, this.userRole, conn);
+    }
+
+    String firstName = fullName.split(" ")[0];
+    role_lbl.setText("Welcome, " + firstName + " (" + role + ")");
+}
+    
+    private void applyProductWriteRBAC() {
+    boolean canWrite = RBAC.canAccess(userRole, RBAC.Feature.PRODUCTS_WRITE);
+
+    addProduct_btn.setEnabled(canWrite);
+    edit_btn.setEnabled(canWrite);
+
+    if (!canWrite) {
+        addProduct_btn.setToolTipText("Access denied.");
+        edit_btn.setToolTipText("Access denied.");
+    } else {
+        addProduct_btn.setToolTipText(null);
+        edit_btn.setToolTipText(null);
+    }
+}
     
     private void startDateTimePH() {
 
@@ -186,17 +277,76 @@ public class Dashboard extends javax.swing.JFrame {
      new azuelorhoderick.StockMovement(this).init();
      
      
+     
+     
+     initNotificationBadgeUI();
+     refreshNotifBadge();
+     startNotifBadgeAutoRefresh();
+     
+     initDbConn(); // ✅ make sure conn exists first
+     
+  
+
+    this.userId = userId;
+    this.userRole = role;
+    
+    
+        
+
+     
+     
        // VERY IMPORTANT LINE
     reportsCardLayout = new CardLayout();
     reportsRightPanel.setLayout(reportsCardLayout);
 
     setupReportsPanels(); // create panels
+    
+     if (conn != null) {
+        notifController = new SlidePanelController(this, this.userId, this.userRole, conn);
+    }
 
     String firstName = fullName.split(" ")[0];
     role_lbl.setText("Welcome, " + firstName + " (" + role + ")");
 }
 
     
+    //rbac
+    private void applyRBAC() {
+    setNavAccess(navProducts, RBAC.Feature.PRODUCTS);
+    setNavAccess(navInventory, RBAC.Feature.INVENTORY);
+    setNavAccess(navPosController, RBAC.Feature.POS);
+    setNavAccess(navReports, RBAC.Feature.REPORTS);
+    setNavAccess(navUsers, RBAC.Feature.USERS);
+    setNavAccess(navStock, RBAC.Feature.ABOUT); // About = navStock
+}
+
+private void setNavAccess(javax.swing.JComponent nav, RBAC.Feature feature) {
+    boolean allowed = RBAC.canAccess(userRole, feature);
+
+    nav.setEnabled(allowed);
+    nav.setCursor(allowed ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                          : Cursor.getDefaultCursor());
+
+    if (!allowed) {
+        nav.setToolTipText("Access denied for your role.");
+    } else {
+        nav.setToolTipText(null);
+    }
+}
+    
+    //notif
+    private void initDbConn() {
+    try {
+        this.conn = DBConnection.getConnection(); // adjust if your method name is different
+    } catch (Exception ex) {
+        JOptionPane.showMessageDialog(this, "DB Connection error: " + ex.getMessage());
+        this.conn = null;
+    }
+}
+    
+    
+    //rolebased
+  
     
     //edit
     private void setupCards() {
@@ -560,7 +710,63 @@ public void loadProductsToTable() {
     reportsCardLayout.show(reportsRightPanel, CARD_INV_STATUS);
 }
 
+     
+     
+     //bell
+     private void initNotificationBadgeUI() {
+    // notifBell_btn is your bell JButton in Dashboard
+    notifBell_btn.setLayout(null);
 
+    notifBadgeLbl = new JLabel("0", SwingConstants.CENTER);
+    notifBadgeLbl.setOpaque(true);
+    notifBadgeLbl.setBackground(new java.awt.Color(255, 77, 77));
+    notifBadgeLbl.setForeground(java.awt.Color.WHITE);
+    notifBadgeLbl.setFont(new java.awt.Font("Segoe UI", java.awt.Font.BOLD, 11));
+    notifBadgeLbl.setBorder(javax.swing.BorderFactory.createLineBorder(java.awt.Color.WHITE, 2));
+    notifBadgeLbl.setVisible(false);
+
+    // position badge (top-right)
+    notifBadgeLbl.setBounds(notifBell_btn.getWidth() - 16, 2, 16, 16);
+
+    // ensure updates when resized
+    notifBell_btn.addComponentListener(new java.awt.event.ComponentAdapter() {
+        @Override public void componentResized(java.awt.event.ComponentEvent e) {
+            notifBadgeLbl.setBounds(notifBell_btn.getWidth() - 16, 2, 16, 16);
+        }
+    });
+
+    notifBell_btn.add(notifBadgeLbl);
+}
+     
+     public void refreshNotifBadge() {
+    try {
+        if (conn == null) return;
+
+        azuelorhoderick.NotificationDAO dao = new azuelorhoderick.NotificationDAO(conn);
+        int unread = dao.countUnreadForUser(userId, userRole);
+
+        // If you have badge label
+        if (notifBadgeLbl != null) {
+            notifBadgeLbl.setText(String.valueOf(unread));
+            notifBadgeLbl.setVisible(unread > 0);
+        }
+
+        // Also update slide panel badge (if open)
+        if (notifController != null) {
+            notifController.setUnreadCount(unread);
+        }
+
+    } catch (Exception ex) {
+        System.out.println("refreshNotifBadge error: " + ex.getMessage());
+    }
+}
+
+     private void startNotifBadgeAutoRefresh() {
+    if (notifBadgeTimer != null && notifBadgeTimer.isRunning()) return;
+
+    notifBadgeTimer = new Timer(3000, e -> refreshNotifBadge()); // every 3 seconds
+    notifBadgeTimer.start();
+}
       
 
 
@@ -599,7 +805,54 @@ public void loadProductsToTable() {
         role_lbl = new javax.swing.JLabel();
         jLabel5 = new javax.swing.JLabel();
         jLabel7 = new javax.swing.JLabel();
+        notifBell_btn = new javax.swing.JButton();
+        jLabel34 = new javax.swing.JLabel();
         jPanel1 = new javax.swing.JPanel();
+        userPanel = new javax.swing.JPanel();
+        jPanel4 = new javax.swing.JPanel();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        user_tbl = new javax.swing.JTable();
+        jLabel2 = new javax.swing.JLabel();
+        searchName_txt = new javax.swing.JTextField();
+        jLabel3 = new javax.swing.JLabel();
+        jPanel7 = new javax.swing.JPanel();
+        jPanel5 = new javax.swing.JPanel();
+        addUser_btn = new javax.swing.JButton();
+        update_btn = new javax.swing.JButton();
+        delete_btn = new javax.swing.JButton();
+        changePass_btn = new javax.swing.JButton();
+        jLabel4 = new javax.swing.JLabel();
+        jPanel6 = new javax.swing.JPanel();
+        stockPanel = new javax.swing.JPanel();
+        jPanel14 = new javax.swing.JPanel();
+        jPanel15 = new javax.swing.JPanel();
+        jLabel16 = new javax.swing.JLabel();
+        jLabel35 = new javax.swing.JLabel();
+        jLabel36 = new javax.swing.JLabel();
+        jPanel17 = new javax.swing.JPanel();
+        jLabel30 = new javax.swing.JLabel();
+        jLabel32 = new javax.swing.JLabel();
+        jLabel19 = new javax.swing.JLabel();
+        jPanel19 = new javax.swing.JPanel();
+        jLabel28 = new javax.swing.JLabel();
+        jLabel31 = new javax.swing.JLabel();
+        jPanel18 = new javax.swing.JPanel();
+        jLabel26 = new javax.swing.JLabel();
+        jLabel27 = new javax.swing.JLabel();
+        jLabel22 = new javax.swing.JLabel();
+        jLabel23 = new javax.swing.JLabel();
+        jLabel24 = new javax.swing.JLabel();
+        jLabel25 = new javax.swing.JLabel();
+        jPanel20 = new javax.swing.JPanel();
+        jLabel29 = new javax.swing.JLabel();
+        productPanel = new javax.swing.JPanel();
+        jPanel2 = new javax.swing.JPanel();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        product_tbl = new javax.swing.JTable();
+        addProduct_btn = new javax.swing.JButton();
+        jLabel1 = new javax.swing.JLabel();
+        search_txt = new javax.swing.JTextField();
+        edit_btn = new javax.swing.JButton();
         reportPanel = new javax.swing.JPanel();
         jPanel9 = new javax.swing.JPanel();
         jPanel11 = new javax.swing.JPanel();
@@ -655,30 +908,6 @@ public void loadProductsToTable() {
         receiveStock_btn = new javax.swing.JButton();
         jScrollPane3 = new javax.swing.JScrollPane();
         inventory_tbl = new javax.swing.JTable();
-        productPanel = new javax.swing.JPanel();
-        jPanel2 = new javax.swing.JPanel();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        product_tbl = new javax.swing.JTable();
-        addProduct_btn = new javax.swing.JButton();
-        jLabel1 = new javax.swing.JLabel();
-        search_txt = new javax.swing.JTextField();
-        edit_btn = new javax.swing.JButton();
-        userPanel = new javax.swing.JPanel();
-        jPanel4 = new javax.swing.JPanel();
-        jScrollPane2 = new javax.swing.JScrollPane();
-        user_tbl = new javax.swing.JTable();
-        jLabel2 = new javax.swing.JLabel();
-        searchName_txt = new javax.swing.JTextField();
-        jLabel3 = new javax.swing.JLabel();
-        jPanel7 = new javax.swing.JPanel();
-        jPanel5 = new javax.swing.JPanel();
-        addUser_btn = new javax.swing.JButton();
-        update_btn = new javax.swing.JButton();
-        delete_btn = new javax.swing.JButton();
-        changePass_btn = new javax.swing.JButton();
-        jLabel4 = new javax.swing.JLabel();
-        jPanel6 = new javax.swing.JPanel();
-        stockPanel = new javax.swing.JPanel();
         posControllerPanel = new javax.swing.JPanel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -750,19 +979,19 @@ public void loadProductsToTable() {
         navStock.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         lblStock.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
-        lblStock.setText("Stock");
+        lblStock.setText("About");
         lblStock.setToolTipText("");
-        navStock.add(lblStock, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 40, -1, -1));
+        navStock.add(lblStock, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 50, 40, -1));
 
-        lblStocksIcon.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/packages.png"))); // NOI18N
+        lblStocksIcon.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/information (1).png"))); // NOI18N
         lblStocksIcon.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 lblStocksIconMouseClicked(evt);
             }
         });
-        navStock.add(lblStocksIcon, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 0, -1, -1));
+        navStock.add(lblStocksIcon, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 10, 30, 30));
 
-        dashboardNav.add(navStock, new org.netbeans.lib.awtextra.AbsoluteConstraints(540, 20, 80, 70));
+        dashboardNav.add(navStock, new org.netbeans.lib.awtextra.AbsoluteConstraints(410, 10, 80, 70));
 
         navReports.setBackground(new java.awt.Color(255, 255, 255));
         navReports.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
@@ -853,10 +1082,10 @@ public void loadProductsToTable() {
         });
         jPanel3.add(logout, new org.netbeans.lib.awtextra.AbsoluteConstraints(1200, 20, 80, 30));
 
-        jLabel6.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        jLabel6.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jLabel6.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel6.setText("POS SYSTEM DASHBOARD");
-        jPanel3.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(70, 20, 250, 30));
+        jLabel6.setText("Where Inventory Meets Intelligence");
+        jPanel3.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(110, 40, 230, 20));
 
         role_lbl.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
         role_lbl.setForeground(new java.awt.Color(255, 255, 255));
@@ -866,13 +1095,363 @@ public void loadProductsToTable() {
         jLabel5.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/avatar (2).png"))); // NOI18N
         jPanel3.add(jLabel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(1160, 10, 30, 50));
 
-        jLabel7.setIcon(new javax.swing.ImageIcon(getClass().getResource("/Images/po.png"))); // NOI18N
-        jPanel3.add(jLabel7, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 10, 50, 50));
+        jLabel7.setIcon(new javax.swing.ImageIcon(getClass().getResource("/Images/logoFinal.png"))); // NOI18N
+        jPanel3.add(jLabel7, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 10, 100, 60));
+
+        notifBell_btn.setBackground(new java.awt.Color(51, 0, 255));
+        notifBell_btn.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/bell.png"))); // NOI18N
+        notifBell_btn.setBorder(null);
+        notifBell_btn.setBorderPainted(false);
+        notifBell_btn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                notifBell_btnActionPerformed(evt);
+            }
+        });
+        jPanel3.add(notifBell_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(900, 20, 20, 30));
+
+        jLabel34.setFont(new java.awt.Font("Segoe UI", 0, 24)); // NOI18N
+        jLabel34.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel34.setText("StockWise POS ");
+        jPanel3.add(jLabel34, new org.netbeans.lib.awtextra.AbsoluteConstraints(110, 10, 170, 30));
 
         getContentPane().add(jPanel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1360, 70));
 
         jPanel1.setBackground(new java.awt.Color(204, 204, 204));
         jPanel1.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        userPanel.setBackground(new java.awt.Color(245, 247, 251));
+        userPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jPanel4.setBackground(new java.awt.Color(255, 255, 255));
+        jPanel4.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        user_tbl.setBackground(new java.awt.Color(255, 255, 255));
+        user_tbl.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+
+            },
+            new String [] {
+                "user_id", "first_name", "last_name", "role", "email", "contact_number", "status", "date_created"
+            }
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false, false, false, false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        jScrollPane2.setViewportView(user_tbl);
+        if (user_tbl.getColumnModel().getColumnCount() > 0) {
+            user_tbl.getColumnModel().getColumn(0).setResizable(false);
+            user_tbl.getColumnModel().getColumn(1).setResizable(false);
+            user_tbl.getColumnModel().getColumn(2).setResizable(false);
+            user_tbl.getColumnModel().getColumn(3).setResizable(false);
+            user_tbl.getColumnModel().getColumn(4).setResizable(false);
+            user_tbl.getColumnModel().getColumn(5).setResizable(false);
+            user_tbl.getColumnModel().getColumn(6).setResizable(false);
+            user_tbl.getColumnModel().getColumn(7).setResizable(false);
+        }
+
+        jPanel4.add(jScrollPane2, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 120, 1070, 310));
+
+        jLabel2.setText("Search Name:");
+        jPanel4.add(jLabel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 80, 100, 30));
+
+        searchName_txt.setBackground(new java.awt.Color(255, 255, 255));
+        searchName_txt.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                searchName_txtActionPerformed(evt);
+            }
+        });
+        jPanel4.add(searchName_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(130, 80, 280, 30));
+
+        jLabel3.setFont(new java.awt.Font("Segoe UI", 0, 24)); // NOI18N
+        jLabel3.setText("USERS");
+        jPanel4.add(jLabel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, -1, -1));
+
+        jPanel7.setBackground(new java.awt.Color(0, 0, 0));
+
+        javax.swing.GroupLayout jPanel7Layout = new javax.swing.GroupLayout(jPanel7);
+        jPanel7.setLayout(jPanel7Layout);
+        jPanel7Layout.setHorizontalGroup(
+            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 230, Short.MAX_VALUE)
+        );
+        jPanel7Layout.setVerticalGroup(
+            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 0, Short.MAX_VALUE)
+        );
+
+        jPanel4.add(jPanel7, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 40, 230, 2));
+
+        userPanel.add(jPanel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 30, 1090, 440));
+
+        jPanel5.setBackground(new java.awt.Color(255, 255, 255));
+        jPanel5.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        addUser_btn.setBackground(new java.awt.Color(51, 255, 51));
+        addUser_btn.setText("Add User");
+        addUser_btn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                addUser_btnActionPerformed(evt);
+            }
+        });
+        jPanel5.add(addUser_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 60, 170, 40));
+
+        update_btn.setBackground(new java.awt.Color(0, 0, 255));
+        update_btn.setText("UPDATE");
+        update_btn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                update_btnActionPerformed(evt);
+            }
+        });
+        jPanel5.add(update_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 110, 170, 40));
+
+        delete_btn.setBackground(new java.awt.Color(204, 0, 0));
+        delete_btn.setText("DELETE");
+        delete_btn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                delete_btnActionPerformed(evt);
+            }
+        });
+        jPanel5.add(delete_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 160, 170, 40));
+
+        changePass_btn.setBackground(new java.awt.Color(255, 102, 0));
+        changePass_btn.setText("CHANGE PASSWORD");
+        changePass_btn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                changePass_btnActionPerformed(evt);
+            }
+        });
+        jPanel5.add(changePass_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 210, 170, 40));
+
+        jLabel4.setFont(new java.awt.Font("Segoe UI", 0, 24)); // NOI18N
+        jLabel4.setText("USERS");
+        jPanel5.add(jLabel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, -1, -1));
+
+        jPanel6.setBackground(new java.awt.Color(0, 0, 0));
+
+        javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);
+        jPanel6.setLayout(jPanel6Layout);
+        jPanel6Layout.setHorizontalGroup(
+            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 230, Short.MAX_VALUE)
+        );
+        jPanel6Layout.setVerticalGroup(
+            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGap(0, 0, Short.MAX_VALUE)
+        );
+
+        jPanel5.add(jPanel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 40, 230, 2));
+
+        userPanel.add(jPanel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(1110, 30, 230, 440));
+
+        jPanel1.add(userPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1360, 500));
+
+        stockPanel.setBackground(new java.awt.Color(245, 247, 251));
+        stockPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jPanel14.setBackground(new java.awt.Color(255, 255, 255));
+        jPanel14.setAutoscrolls(true);
+        jPanel14.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jPanel15.setBackground(new java.awt.Color(51, 0, 255));
+        jPanel15.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jLabel16.setIcon(new javax.swing.ImageIcon(getClass().getResource("/Images/logoFinal.png"))); // NOI18N
+        jPanel15.add(jLabel16, new org.netbeans.lib.awtextra.AbsoluteConstraints(-30, 10, 110, 40));
+
+        jLabel35.setFont(new java.awt.Font("Segoe UI", 0, 24)); // NOI18N
+        jLabel35.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel35.setText("StockWise POS ");
+        jPanel15.add(jLabel35, new org.netbeans.lib.awtextra.AbsoluteConstraints(70, 0, 170, 30));
+
+        jLabel36.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jLabel36.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel36.setText("Where Inventory Meets Intelligence");
+        jPanel15.add(jLabel36, new org.netbeans.lib.awtextra.AbsoluteConstraints(70, 30, 230, 20));
+
+        jPanel14.add(jPanel15, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 820, 60));
+
+        jPanel17.setBackground(new java.awt.Color(255, 255, 255));
+        jPanel17.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(204, 204, 204), 2));
+        jPanel17.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jLabel30.setBackground(new java.awt.Color(0, 0, 0));
+        jLabel30.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        jLabel30.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel30.setText("Rhoderick G Azuelo");
+        jPanel17.add(jLabel30, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 40, -1, 30));
+
+        jLabel32.setBackground(new java.awt.Color(0, 0, 0));
+        jLabel32.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        jLabel32.setForeground(new java.awt.Color(0, 51, 204));
+        jLabel32.setText("Developer");
+        jPanel17.add(jLabel32, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, -1, 20));
+
+        jPanel14.add(jPanel17, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 310, 220, 80));
+
+        jLabel19.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        jLabel19.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel19.setText("UI implementation.");
+        jLabel19.setToolTipText("");
+        jLabel19.setVerticalAlignment(javax.swing.SwingConstants.TOP);
+        jPanel14.add(jLabel19, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 250, 620, 30));
+
+        jPanel19.setBackground(new java.awt.Color(255, 255, 255));
+        jPanel19.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(204, 204, 204), 2));
+        jPanel19.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jLabel28.setBackground(new java.awt.Color(0, 0, 0));
+        jLabel28.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        jLabel28.setForeground(new java.awt.Color(0, 51, 204));
+        jLabel28.setText("Developed  Using");
+        jPanel19.add(jLabel28, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, 160, -1));
+
+        jLabel31.setBackground(new java.awt.Color(0, 0, 0));
+        jLabel31.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        jLabel31.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel31.setText("Java Swing, MySQL");
+        jPanel19.add(jLabel31, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 40, 180, 30));
+
+        jPanel14.add(jPanel19, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 310, 220, 80));
+
+        jPanel18.setBackground(new java.awt.Color(255, 255, 255));
+        jPanel18.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(204, 204, 204), 2));
+        jPanel18.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jLabel26.setBackground(new java.awt.Color(0, 0, 0));
+        jLabel26.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
+        jLabel26.setForeground(new java.awt.Color(0, 51, 204));
+        jLabel26.setText("Version");
+        jPanel18.add(jLabel26, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, 130, -1));
+
+        jLabel27.setBackground(new java.awt.Color(0, 0, 0));
+        jLabel27.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        jLabel27.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel27.setText("v1.0");
+        jPanel18.add(jLabel27, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 40, 80, 30));
+
+        jPanel14.add(jPanel18, new org.netbeans.lib.awtextra.AbsoluteConstraints(550, 310, 220, 80));
+
+        jLabel22.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        jLabel22.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel22.setText("This project was developed by Rhoderick G. Azuelo, a Bachelor of Science in Information ");
+        jLabel22.setToolTipText("");
+        jLabel22.setVerticalAlignment(javax.swing.SwingConstants.TOP);
+        jPanel14.add(jLabel22, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 90, 720, 30));
+
+        jLabel23.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        jLabel23.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel23.setText("Technology (BSIT) student from Notre Dame of Marbel University.  The system was created");
+        jLabel23.setToolTipText("");
+        jLabel23.setVerticalAlignment(javax.swing.SwingConstants.TOP);
+        jPanel14.add(jLabel23, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 130, 720, 30));
+
+        jLabel24.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        jLabel24.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel24.setText("using Java Swing in NetBeans IDE, with MySQL Database managed through WAMP Server,");
+        jLabel24.setToolTipText("");
+        jLabel24.setVerticalAlignment(javax.swing.SwingConstants.TOP);
+        jPanel14.add(jLabel24, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 170, 720, 30));
+
+        jLabel25.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        jLabel25.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel25.setText("showcasing practical skills in software development, database design, and professional");
+        jLabel25.setToolTipText("");
+        jLabel25.setVerticalAlignment(javax.swing.SwingConstants.TOP);
+        jPanel14.add(jLabel25, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 210, 720, 30));
+
+        jPanel20.setBackground(new java.awt.Color(153, 153, 153));
+        jPanel20.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+        jPanel14.add(jPanel20, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 400, 720, 1));
+
+        jLabel29.setBackground(new java.awt.Color(0, 0, 0));
+        jLabel29.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
+        jLabel29.setForeground(new java.awt.Color(0, 51, 204));
+        jLabel29.setText("February 25, 2026");
+        jPanel14.add(jLabel29, new org.netbeans.lib.awtextra.AbsoluteConstraints(350, 420, -1, -1));
+
+        stockPanel.add(jPanel14, new org.netbeans.lib.awtextra.AbsoluteConstraints(290, 20, 820, 460));
+
+        jPanel1.add(stockPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1360, 500));
+
+        productPanel.setBackground(new java.awt.Color(245, 247, 251));
+        productPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jPanel2.setBackground(new java.awt.Color(255, 255, 255));
+        jPanel2.setForeground(new java.awt.Color(255, 255, 255));
+        jPanel2.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        product_tbl.setBackground(new java.awt.Color(238, 242, 255));
+        product_tbl.setForeground(new java.awt.Color(17, 24, 39));
+        product_tbl.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+
+            },
+            new String [] {
+                "Product ID", "Barcode", "Product Name", "Category", "Supplier", "Unit ", "Unit Price", "Cost Price", "Quantity", "Reorder Level", "Status", "Date Added"
+            }
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false, false, false, false, false, false, false, false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        jScrollPane1.setViewportView(product_tbl);
+        if (product_tbl.getColumnModel().getColumnCount() > 0) {
+            product_tbl.getColumnModel().getColumn(0).setResizable(false);
+            product_tbl.getColumnModel().getColumn(1).setResizable(false);
+            product_tbl.getColumnModel().getColumn(2).setResizable(false);
+            product_tbl.getColumnModel().getColumn(3).setResizable(false);
+            product_tbl.getColumnModel().getColumn(4).setResizable(false);
+            product_tbl.getColumnModel().getColumn(5).setResizable(false);
+            product_tbl.getColumnModel().getColumn(6).setResizable(false);
+            product_tbl.getColumnModel().getColumn(7).setResizable(false);
+            product_tbl.getColumnModel().getColumn(8).setResizable(false);
+            product_tbl.getColumnModel().getColumn(9).setResizable(false);
+            product_tbl.getColumnModel().getColumn(10).setResizable(false);
+            product_tbl.getColumnModel().getColumn(11).setResizable(false);
+        }
+
+        jPanel2.add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 50, 1320, 410));
+
+        addProduct_btn.setBackground(new java.awt.Color(16, 185, 129));
+        addProduct_btn.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        addProduct_btn.setForeground(new java.awt.Color(255, 255, 255));
+        addProduct_btn.setText("Add Product");
+        addProduct_btn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                addProduct_btnActionPerformed(evt);
+            }
+        });
+        jPanel2.add(addProduct_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(1060, 10, 130, 30));
+
+        jLabel1.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jLabel1.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel1.setText("Search:");
+        jPanel2.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 0, 60, 50));
+
+        search_txt.setBackground(new java.awt.Color(255, 255, 255));
+        jPanel2.add(search_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 10, 250, 30));
+
+        edit_btn.setBackground(new java.awt.Color(0, 0, 255));
+        edit_btn.setText("EDIT PRODUCT");
+        edit_btn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                edit_btnActionPerformed(evt);
+            }
+        });
+        jPanel2.add(edit_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(1200, 10, 130, 30));
+
+        productPanel.add(jPanel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, 1340, 470));
+
+        jPanel1.add(productPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1360, 500));
 
         reportPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
@@ -1276,215 +1855,6 @@ public void loadProductsToTable() {
 
         jPanel1.add(inventoryPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1360, 500));
 
-        productPanel.setBackground(new java.awt.Color(245, 247, 251));
-        productPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-
-        jPanel2.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel2.setForeground(new java.awt.Color(255, 255, 255));
-        jPanel2.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-
-        product_tbl.setBackground(new java.awt.Color(238, 242, 255));
-        product_tbl.setForeground(new java.awt.Color(17, 24, 39));
-        product_tbl.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-
-            },
-            new String [] {
-                "Product ID", "Barcode", "Product Name", "Category", "Supplier", "Unit ", "Unit Price", "Cost Price", "Quantity", "Reorder Level", "Status", "Date Added"
-            }
-        ) {
-            boolean[] canEdit = new boolean [] {
-                false, false, false, false, false, false, false, false, false, false, false, false
-            };
-
-            public boolean isCellEditable(int rowIndex, int columnIndex) {
-                return canEdit [columnIndex];
-            }
-        });
-        jScrollPane1.setViewportView(product_tbl);
-        if (product_tbl.getColumnModel().getColumnCount() > 0) {
-            product_tbl.getColumnModel().getColumn(0).setResizable(false);
-            product_tbl.getColumnModel().getColumn(1).setResizable(false);
-            product_tbl.getColumnModel().getColumn(2).setResizable(false);
-            product_tbl.getColumnModel().getColumn(3).setResizable(false);
-            product_tbl.getColumnModel().getColumn(4).setResizable(false);
-            product_tbl.getColumnModel().getColumn(5).setResizable(false);
-            product_tbl.getColumnModel().getColumn(6).setResizable(false);
-            product_tbl.getColumnModel().getColumn(7).setResizable(false);
-            product_tbl.getColumnModel().getColumn(8).setResizable(false);
-            product_tbl.getColumnModel().getColumn(9).setResizable(false);
-            product_tbl.getColumnModel().getColumn(10).setResizable(false);
-            product_tbl.getColumnModel().getColumn(11).setResizable(false);
-        }
-
-        jPanel2.add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 50, 1320, 410));
-
-        addProduct_btn.setBackground(new java.awt.Color(16, 185, 129));
-        addProduct_btn.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        addProduct_btn.setForeground(new java.awt.Color(255, 255, 255));
-        addProduct_btn.setText("Add Product");
-        addProduct_btn.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                addProduct_btnActionPerformed(evt);
-            }
-        });
-        jPanel2.add(addProduct_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(1060, 10, 130, 30));
-
-        jLabel1.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jLabel1.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel1.setText("Search:");
-        jPanel2.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 0, 60, 50));
-
-        search_txt.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel2.add(search_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 10, 250, 30));
-
-        edit_btn.setBackground(new java.awt.Color(0, 0, 255));
-        edit_btn.setText("EDIT PRODUCT");
-        edit_btn.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                edit_btnActionPerformed(evt);
-            }
-        });
-        jPanel2.add(edit_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(1200, 10, 130, 30));
-
-        productPanel.add(jPanel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, 1340, 470));
-
-        jPanel1.add(productPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1360, 500));
-
-        userPanel.setBackground(new java.awt.Color(245, 247, 251));
-        userPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-
-        jPanel4.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel4.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-
-        user_tbl.setBackground(new java.awt.Color(255, 255, 255));
-        user_tbl.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-
-            },
-            new String [] {
-                "user_id", "first_name", "last_name", "role", "email", "contact_number", "status", "date_created"
-            }
-        ) {
-            boolean[] canEdit = new boolean [] {
-                false, false, false, false, false, false, false, false
-            };
-
-            public boolean isCellEditable(int rowIndex, int columnIndex) {
-                return canEdit [columnIndex];
-            }
-        });
-        jScrollPane2.setViewportView(user_tbl);
-        if (user_tbl.getColumnModel().getColumnCount() > 0) {
-            user_tbl.getColumnModel().getColumn(0).setResizable(false);
-            user_tbl.getColumnModel().getColumn(1).setResizable(false);
-            user_tbl.getColumnModel().getColumn(2).setResizable(false);
-            user_tbl.getColumnModel().getColumn(3).setResizable(false);
-            user_tbl.getColumnModel().getColumn(4).setResizable(false);
-            user_tbl.getColumnModel().getColumn(5).setResizable(false);
-            user_tbl.getColumnModel().getColumn(6).setResizable(false);
-            user_tbl.getColumnModel().getColumn(7).setResizable(false);
-        }
-
-        jPanel4.add(jScrollPane2, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 120, 1070, 310));
-
-        jLabel2.setText("Search Name:");
-        jPanel4.add(jLabel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 80, 100, 30));
-
-        searchName_txt.setBackground(new java.awt.Color(255, 255, 255));
-        searchName_txt.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                searchName_txtActionPerformed(evt);
-            }
-        });
-        jPanel4.add(searchName_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(130, 80, 280, 30));
-
-        jLabel3.setFont(new java.awt.Font("Segoe UI", 0, 24)); // NOI18N
-        jLabel3.setText("USERS");
-        jPanel4.add(jLabel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, -1, -1));
-
-        jPanel7.setBackground(new java.awt.Color(0, 0, 0));
-
-        javax.swing.GroupLayout jPanel7Layout = new javax.swing.GroupLayout(jPanel7);
-        jPanel7.setLayout(jPanel7Layout);
-        jPanel7Layout.setHorizontalGroup(
-            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 230, Short.MAX_VALUE)
-        );
-        jPanel7Layout.setVerticalGroup(
-            jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 0, Short.MAX_VALUE)
-        );
-
-        jPanel4.add(jPanel7, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 40, 230, 2));
-
-        userPanel.add(jPanel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 30, 1090, 440));
-
-        jPanel5.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel5.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-
-        addUser_btn.setBackground(new java.awt.Color(51, 255, 51));
-        addUser_btn.setText("Add User");
-        addUser_btn.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                addUser_btnActionPerformed(evt);
-            }
-        });
-        jPanel5.add(addUser_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 60, 170, 40));
-
-        update_btn.setBackground(new java.awt.Color(0, 0, 255));
-        update_btn.setText("UPDATE");
-        update_btn.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                update_btnActionPerformed(evt);
-            }
-        });
-        jPanel5.add(update_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 110, 170, 40));
-
-        delete_btn.setBackground(new java.awt.Color(204, 0, 0));
-        delete_btn.setText("DELETE");
-        delete_btn.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                delete_btnActionPerformed(evt);
-            }
-        });
-        jPanel5.add(delete_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 160, 170, 40));
-
-        changePass_btn.setBackground(new java.awt.Color(255, 102, 0));
-        changePass_btn.setText("CHANGE PASSWORD");
-        changePass_btn.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                changePass_btnActionPerformed(evt);
-            }
-        });
-        jPanel5.add(changePass_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 210, 170, 40));
-
-        jLabel4.setFont(new java.awt.Font("Segoe UI", 0, 24)); // NOI18N
-        jLabel4.setText("USERS");
-        jPanel5.add(jLabel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, -1, -1));
-
-        jPanel6.setBackground(new java.awt.Color(0, 0, 0));
-
-        javax.swing.GroupLayout jPanel6Layout = new javax.swing.GroupLayout(jPanel6);
-        jPanel6.setLayout(jPanel6Layout);
-        jPanel6Layout.setHorizontalGroup(
-            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 230, Short.MAX_VALUE)
-        );
-        jPanel6Layout.setVerticalGroup(
-            jPanel6Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 0, Short.MAX_VALUE)
-        );
-
-        jPanel5.add(jPanel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 40, 230, 2));
-
-        userPanel.add(jPanel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(1110, 30, 230, 440));
-
-        jPanel1.add(userPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1360, 500));
-
-        stockPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-        jPanel1.add(stockPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1360, 500));
-
         posControllerPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
         jPanel1.add(posControllerPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1360, 500));
 
@@ -1521,38 +1891,60 @@ if (choice == JOptionPane.YES_OPTION) {
 
     private void lblProductIconMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_lblProductIconMouseClicked
         // TODO add your handling code here:
+            
             showCard(CARD_PRODUCTS);
  
     }//GEN-LAST:event_lblProductIconMouseClicked
 
     private void lblStocksIconMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_lblStocksIconMouseClicked
         // TODO add your handling code here:
+        
         showCard(CARD_STOCK);
     }//GEN-LAST:event_lblStocksIconMouseClicked
 
     private void navProductsMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_navProductsMouseClicked
         // TODO add your handling code here:
+        if (!navProducts.isEnabled()) {
+        javax.swing.JOptionPane.showMessageDialog(this, "Access denied.");
+        return;
+    }
         showCard(CARD_PRODUCTS);
     }//GEN-LAST:event_navProductsMouseClicked
 
     private void navInventoryMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_navInventoryMouseClicked
         // TODO add your handling code here:
+        if (!navInventory.isEnabled()) {
+        javax.swing.JOptionPane.showMessageDialog(this, "Access denied.");
+        return;
+    }
         showCard(CARD_INVENTORY);
     }//GEN-LAST:event_navInventoryMouseClicked
 
     private void navStockMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_navStockMouseClicked
         // TODO add your handling code here:
+        if (!navStock.isEnabled()) {
+        javax.swing.JOptionPane.showMessageDialog(this, "Access denied.");
+        return;
+    }
         showCard(CARD_STOCK);
         
     }//GEN-LAST:event_navStockMouseClicked
 
     private void navReportsMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_navReportsMouseClicked
         // TODO add your handling code here:
+        if (!navReports.isEnabled()) {
+        javax.swing.JOptionPane.showMessageDialog(this, "Access denied.");
+        return;
+    }
         showCard(CARD_REPORTS);
     }//GEN-LAST:event_navReportsMouseClicked
 
     private void navPosControllerMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_navPosControllerMouseClicked
         // TODO add your handling code here:
+         if (!navPosController.isEnabled()) {
+        javax.swing.JOptionPane.showMessageDialog(this, "Access denied.");
+        return;
+    }
          showCard(CARD_POS);
          new azuelorhoderick.POSController(this, 1).init();
 
@@ -1561,15 +1953,24 @@ if (choice == JOptionPane.YES_OPTION) {
 
     private void navUsersMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_navUsersMouseClicked
         // TODO add your handling code here:
+        if (!navUsers.isEnabled()) {
+        javax.swing.JOptionPane.showMessageDialog(this, "Access denied.");
+        return;
+    }
         showCard(CARD_USERS);
     }//GEN-LAST:event_navUsersMouseClicked
 
     private void addProduct_btnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addProduct_btnActionPerformed
         // TODO add your handling code here:
-         addProduct ps = new addProduct(this); // ✅ pass Dashboard
-         ps.setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
-         ps.setLocationRelativeTo(this);
-         ps.setVisible(true);
+         if (!RBAC.canAccess(userRole, RBAC.Feature.PRODUCTS_WRITE)) {
+        JOptionPane.showMessageDialog(this, "Access denied.");
+        return;
+    }
+
+    addProduct ps = new addProduct(this);
+    ps.setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+    ps.setLocationRelativeTo(this);
+    ps.setVisible(true);
     }//GEN-LAST:event_addProduct_btnActionPerformed
 
     private void addUser_btnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addUser_btnActionPerformed
@@ -1676,7 +2077,12 @@ if (choice == JOptionPane.YES_OPTION) {
 
     private void edit_btnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_edit_btnActionPerformed
         // TODO add your handling code here:
-        int row = product_tbl.getSelectedRow();
+        if (!RBAC.canAccess(userRole, RBAC.Feature.PRODUCTS_WRITE)) {
+        JOptionPane.showMessageDialog(this, "Access denied.");
+        return;
+    }
+
+    int row = product_tbl.getSelectedRow();
     if (row == -1) {
         JOptionPane.showMessageDialog(this, "Please select a product first.");
         return;
@@ -1751,6 +2157,12 @@ if (choice == JOptionPane.YES_OPTION) {
         // TODO add your handling code here:
     }//GEN-LAST:event_lowStockSearch_txtActionPerformed
 
+    private void notifBell_btnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_notifBell_btnActionPerformed
+        // TODO add your handling code here:
+        refreshNotifBadge();
+        notifController.toggle();
+    }//GEN-LAST:event_notifBell_btnActionPerformed
+
     
     
     /**
@@ -1820,12 +2232,28 @@ if (choice == JOptionPane.YES_OPTION) {
     private javax.swing.JLabel jLabel13;
     private javax.swing.JLabel jLabel14;
     private javax.swing.JLabel jLabel15;
+    private javax.swing.JLabel jLabel16;
     private javax.swing.JLabel jLabel17;
     private javax.swing.JLabel jLabel18;
+    private javax.swing.JLabel jLabel19;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel20;
     private javax.swing.JLabel jLabel21;
+    private javax.swing.JLabel jLabel22;
+    private javax.swing.JLabel jLabel23;
+    private javax.swing.JLabel jLabel24;
+    private javax.swing.JLabel jLabel25;
+    private javax.swing.JLabel jLabel26;
+    private javax.swing.JLabel jLabel27;
+    private javax.swing.JLabel jLabel28;
+    private javax.swing.JLabel jLabel29;
     private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel30;
+    private javax.swing.JLabel jLabel31;
+    private javax.swing.JLabel jLabel32;
+    private javax.swing.JLabel jLabel34;
+    private javax.swing.JLabel jLabel35;
+    private javax.swing.JLabel jLabel36;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
@@ -1837,7 +2265,13 @@ if (choice == JOptionPane.YES_OPTION) {
     private javax.swing.JPanel jPanel11;
     private javax.swing.JPanel jPanel12;
     private javax.swing.JPanel jPanel13;
+    private javax.swing.JPanel jPanel14;
+    private javax.swing.JPanel jPanel15;
+    private javax.swing.JPanel jPanel17;
+    private javax.swing.JPanel jPanel18;
+    private javax.swing.JPanel jPanel19;
     private javax.swing.JPanel jPanel2;
+    private javax.swing.JPanel jPanel20;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
     private javax.swing.JPanel jPanel5;
@@ -1877,6 +2311,7 @@ if (choice == JOptionPane.YES_OPTION) {
     private javax.swing.JPanel navReports;
     private javax.swing.JPanel navStock;
     private javax.swing.JPanel navUsers;
+    private javax.swing.JButton notifBell_btn;
     private javax.swing.JButton pdfMovement_btn;
     private javax.swing.JPanel pnlInventoryStatus;
     private javax.swing.JPanel pnlLowStock;
@@ -1901,4 +2336,6 @@ if (choice == JOptionPane.YES_OPTION) {
     private javax.swing.JPanel userPanel;
     private javax.swing.JTable user_tbl;
     // End of variables declaration//GEN-END:variables
+
+    
 }
