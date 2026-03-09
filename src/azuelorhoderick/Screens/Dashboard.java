@@ -38,6 +38,7 @@ import java.awt.Cursor;
 
 
 
+
 public class Dashboard extends javax.swing.JFrame {
     
     private java.awt.CardLayout cardLayout;
@@ -86,6 +87,8 @@ public class Dashboard extends javax.swing.JFrame {
    //bell
    private JLabel notifBadgeLbl;
    private Timer notifBadgeTimer;
+   
+  
 
    public void initReportsControllers() {
        lowStockCtrl = new azuelorhoderick.LowStock(this);
@@ -154,6 +157,8 @@ public class Dashboard extends javax.swing.JFrame {
         new azuelorhoderick.LowStock(this).init();
         new azuelorhoderick.StockMovement(this).init();
         
+        
+       
 
         
         loadProductsToTable();          // ✅ add
@@ -208,6 +213,8 @@ public class Dashboard extends javax.swing.JFrame {
     reportsRightPanel.setLayout(reportsCardLayout);
     setupReportsPanels();
     initReportsControllers();
+    
+    
 
     // ✅ RBAC apply
     applyRBAC();
@@ -388,7 +395,7 @@ private void setNavAccess(javax.swing.JComponent nav, RBAC.Feature feature) {
 
     lblProducts.setForeground(TEXT_DEFAULT);
     lblInventory.setForeground(TEXT_DEFAULT);
-    lblStock.setForeground(TEXT_DEFAULT);
+    menu_btn.setForeground(TEXT_DEFAULT);
     lblPosController.setForeground(TEXT_DEFAULT);
     lblReports.setForeground(TEXT_DEFAULT);
     lblUsers.setForeground(TEXT_DEFAULT);
@@ -409,7 +416,7 @@ private void setNavAccess(javax.swing.JComponent nav, RBAC.Feature feature) {
             break;
         case CARD_STOCK:
             navStock.setBackground(NAV_ACTIVE);
-            lblStock.setForeground(TEXT_ACTIVE);
+            menu_btn.setForeground(TEXT_ACTIVE);
             break;
         case CARD_POS:
             navPosController.setBackground(NAV_ACTIVE);
@@ -430,9 +437,9 @@ private void setNavAccess(javax.swing.JComponent nav, RBAC.Feature feature) {
         DefaultTableModel model = (DefaultTableModel) user_tbl.getModel();
     model.setRowCount(0);
 
-    String sql = "SELECT user_id, first_name, last_name, role, email, contact_number, " +
-                 "status, date_created, last_login " +
-                 "FROM users ORDER BY user_id ASC";
+    String sql = "SELECT user_id, first_name, middle_name, last_name, role, email, contact_number, " +
+             "status, date_created, last_login " +
+             "FROM users ORDER BY user_id ASC";
 
     try (Connection con = DBConnection.getConnection();
          PreparedStatement pst = con.prepareStatement(sql);
@@ -440,16 +447,17 @@ private void setNavAccess(javax.swing.JComponent nav, RBAC.Feature feature) {
 
         while (rs.next()) {
             model.addRow(new Object[]{
-                rs.getInt("user_id"),
-                rs.getString("first_name"),
-                rs.getString("last_name"),
-                rs.getString("role"),
-                rs.getString("email"),
-                rs.getString("contact_number"),
-                rs.getString("status"),
-                rs.getTimestamp("date_created"), // ok to show Timestamp
-                rs.getTimestamp("last_login")    // can be null
-            });
+    rs.getInt("user_id"),
+    rs.getString("first_name"),
+    rs.getString("middle_name"),
+    rs.getString("last_name"),
+    rs.getString("role"),
+    rs.getString("email"),
+    rs.getString("contact_number"),
+    rs.getString("status"),
+    rs.getTimestamp("date_created"),
+    rs.getTimestamp("last_login")
+});
         }
 
     } catch (Exception e) {
@@ -461,52 +469,66 @@ private void setNavAccess(javax.swing.JComponent nav, RBAC.Feature feature) {
 private Integer getSelectedUserId() {
     int row = user_tbl.getSelectedRow();
     if (row == -1) return null;
-    Object val = user_tbl.getValueAt(row, 0); // user_id column
+
+    Object val = user_tbl.getValueAt(row, 0); // user_id
     if (val == null) return null;
-    return Integer.valueOf(val.toString());    
+
+    return Integer.valueOf(val.toString());
 }
 
-private String getSelectedFullname() {
+private String getSelectedFirstName() {
     int row = user_tbl.getSelectedRow();
-    if (row == -1) return null;
+    if (row == -1) return "";
+    Object val = user_tbl.getValueAt(row, 1); // first_name
+    return val == null ? "" : val.toString();
+}
 
-    String first = String.valueOf(user_tbl.getValueAt(row, 1)); // first_name
-    String last  = String.valueOf(user_tbl.getValueAt(row, 2)); // last_name
-    return (first + " " + last).trim();
+private String getSelectedMiddleName() {
+    int row = user_tbl.getSelectedRow();
+    if (row == -1) return "";
+    Object val = user_tbl.getValueAt(row, 2); // middle_name
+    return val == null ? "" : val.toString();
+}
+
+private String getSelectedLastName() {
+    int row = user_tbl.getSelectedRow();
+    if (row == -1) return "";
+    Object val = user_tbl.getValueAt(row, 3); // last_name
+    return val == null ? "" : val.toString();
 }
 
 private String getSelectedRole() {
     int row = user_tbl.getSelectedRow();
     if (row == -1) return null;
-    Object val = user_tbl.getValueAt(row, 3); // role column
+    Object val = user_tbl.getValueAt(row, 4); // role
     return val == null ? null : val.toString();
 }
 
 private String getSelectedEmail() {
     int row = user_tbl.getSelectedRow();
-    if (row == -1) return null;
-    Object val = user_tbl.getValueAt(row, 4); // email
+    if (row == -1) return "";
+    Object val = user_tbl.getValueAt(row, 5); // email
     return val == null ? "" : val.toString();
 }
 
 private String getSelectedContact() {
     int row = user_tbl.getSelectedRow();
-    if (row == -1) return null;
-    Object val = user_tbl.getValueAt(row, 5); // contact_number
+    if (row == -1) return "";
+    Object val = user_tbl.getValueAt(row, 6); // contact_number
     return val == null ? "" : val.toString();
 }
 
 private String getSelectedStatus() {
     int row = user_tbl.getSelectedRow();
-    if (row == -1) return null;
-    Object val = user_tbl.getValueAt(row, 6); // status
+    if (row == -1) return "Active";
+    Object val = user_tbl.getValueAt(row, 7); // status
     return val == null ? "Active" : val.toString();
 }
 
 private String getSelectedDateCreated() {
     int row = user_tbl.getSelectedRow();
-    if (row == -1) return null;
-    Object val = user_tbl.getValueAt(row, 7); // date_created
+    if (row == -1) return "";
+    Object val = user_tbl.getValueAt(row, 8); // date_created
     return val == null ? "" : val.toString();
 }
 
@@ -532,11 +554,9 @@ private String fetchUsernameById(int userId) {
           DefaultTableModel model = (DefaultTableModel) user_tbl.getModel();
     model.setRowCount(0);
 
-    String sql = "SELECT user_id, first_name, last_name, role, email, contact_number, " +
-                 "status, date_created, last_login " +
-                 "FROM users " +
-                 "WHERE first_name LIKE ? OR last_name LIKE ? " +
-                 "ORDER BY user_id ASC";
+    String sql = "SELECT user_id, first_name, middle_name, last_name, role, email, contact_number, " +
+             "status, date_created, last_login " +
+             "FROM users ORDER BY user_id ASC";
 
     try (Connection con = DBConnection.getConnection();
          PreparedStatement pst = con.prepareStatement(sql)) {
@@ -548,16 +568,17 @@ private String fetchUsernameById(int userId) {
         try (ResultSet rs = pst.executeQuery()) {
             while (rs.next()) {
                 model.addRow(new Object[]{
-                    rs.getInt("user_id"),
-                    rs.getString("first_name"),
-                    rs.getString("last_name"),
-                    rs.getString("role"),
-                    rs.getString("email"),
-                    rs.getString("contact_number"),
-                    rs.getString("status"),
-                    rs.getTimestamp("date_created"),
-                    rs.getTimestamp("last_login")
-                });
+    rs.getInt("user_id"),
+    rs.getString("first_name"),
+    rs.getString("middle_name"),
+    rs.getString("last_name"),
+    rs.getString("role"),
+    rs.getString("email"),
+    rs.getString("contact_number"),
+    rs.getString("status"),
+    rs.getTimestamp("date_created"),
+    rs.getTimestamp("last_login")
+});
             }
         }
 
@@ -783,8 +804,8 @@ public void loadProductsToTable() {
         lblInventoryIcon = new javax.swing.JLabel();
         lblInventory = new javax.swing.JLabel();
         navStock = new javax.swing.JPanel();
-        lblStock = new javax.swing.JLabel();
         lblStocksIcon = new javax.swing.JLabel();
+        lblStock1 = new javax.swing.JLabel();
         navReports = new javax.swing.JPanel();
         lblReports = new javax.swing.JLabel();
         lblReportsIcon = new javax.swing.JLabel();
@@ -794,6 +815,9 @@ public void loadProductsToTable() {
         navPosController = new javax.swing.JPanel();
         lblPosController = new javax.swing.JLabel();
         lblPosControllerIcon = new javax.swing.JLabel();
+        navMenu = new javax.swing.JPanel();
+        menu_btn = new javax.swing.JLabel();
+        master_txt = new javax.swing.JLabel();
         footer = new javax.swing.JPanel();
         Footer = new javax.swing.JLabel();
         Date_lbl = new javax.swing.JLabel();
@@ -808,6 +832,17 @@ public void loadProductsToTable() {
         notifBell_btn = new javax.swing.JButton();
         jLabel34 = new javax.swing.JLabel();
         jPanel1 = new javax.swing.JPanel();
+        productPanel = new javax.swing.JPanel();
+        jPanel2 = new javax.swing.JPanel();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        product_tbl = new javax.swing.JTable();
+        addProduct_btn = new javax.swing.JButton();
+        jLabel1 = new javax.swing.JLabel();
+        search_txt = new javax.swing.JTextField();
+        edit_btn = new javax.swing.JButton();
+        deleteProduct_btn = new javax.swing.JButton();
+        jComboBox1 = new javax.swing.JComboBox<>();
+        jLabel33 = new javax.swing.JLabel();
         userPanel = new javax.swing.JPanel();
         jPanel4 = new javax.swing.JPanel();
         jScrollPane2 = new javax.swing.JScrollPane();
@@ -845,14 +880,6 @@ public void loadProductsToTable() {
         jLabel25 = new javax.swing.JLabel();
         jPanel20 = new javax.swing.JPanel();
         jLabel29 = new javax.swing.JLabel();
-        productPanel = new javax.swing.JPanel();
-        jPanel2 = new javax.swing.JPanel();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        product_tbl = new javax.swing.JTable();
-        addProduct_btn = new javax.swing.JButton();
-        jLabel1 = new javax.swing.JLabel();
-        search_txt = new javax.swing.JTextField();
-        edit_btn = new javax.swing.JButton();
         reportPanel = new javax.swing.JPanel();
         jPanel9 = new javax.swing.JPanel();
         jPanel11 = new javax.swing.JPanel();
@@ -914,9 +941,7 @@ public void loadProductsToTable() {
         setTitle("Dashboard");
         setBackground(new java.awt.Color(153, 153, 153));
         setForeground(new java.awt.Color(153, 153, 153));
-        setMaximumSize(new java.awt.Dimension(1366, 760));
         setMinimumSize(new java.awt.Dimension(1366, 760));
-        setPreferredSize(new java.awt.Dimension(1366, 760));
         setResizable(false);
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
@@ -978,11 +1003,6 @@ public void loadProductsToTable() {
         });
         navStock.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
-        lblStock.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
-        lblStock.setText("About");
-        lblStock.setToolTipText("");
-        navStock.add(lblStock, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 50, 40, -1));
-
         lblStocksIcon.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/information (1).png"))); // NOI18N
         lblStocksIcon.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
@@ -990,6 +1010,11 @@ public void loadProductsToTable() {
             }
         });
         navStock.add(lblStocksIcon, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 10, 30, 30));
+
+        lblStock1.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
+        lblStock1.setText("About");
+        lblStock1.setToolTipText("");
+        navStock.add(lblStock1, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 50, 40, -1));
 
         dashboardNav.add(navStock, new org.netbeans.lib.awtextra.AbsoluteConstraints(410, 10, 80, 70));
 
@@ -1047,6 +1072,37 @@ public void loadProductsToTable() {
         navPosController.add(lblPosControllerIcon, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 10, -1, -1));
 
         dashboardNav.add(navPosController, new org.netbeans.lib.awtextra.AbsoluteConstraints(170, 10, 80, 70));
+
+        navMenu.setBackground(new java.awt.Color(255, 255, 255));
+        navMenu.setPreferredSize(new java.awt.Dimension(60, 67));
+        navMenu.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                navMenuMouseClicked(evt);
+            }
+        });
+        navMenu.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        menu_btn.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
+        menu_btn.setIcon(new javax.swing.ImageIcon(getClass().getResource("/azuelorhoderick/azueloIcons/list.png"))); // NOI18N
+        menu_btn.setToolTipText("");
+        menu_btn.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                menu_btnMouseClicked(evt);
+            }
+        });
+        navMenu.add(menu_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 10, 30, 30));
+
+        master_txt.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
+        master_txt.setText("Menu");
+        master_txt.setToolTipText("");
+        master_txt.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                master_txtMouseClicked(evt);
+            }
+        });
+        navMenu.add(master_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 50, 40, -1));
+
+        dashboardNav.add(navMenu, new org.netbeans.lib.awtextra.AbsoluteConstraints(490, 10, 80, 70));
 
         getContentPane().add(dashboardNav, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 70, 1360, 100));
 
@@ -1119,6 +1175,98 @@ public void loadProductsToTable() {
         jPanel1.setBackground(new java.awt.Color(204, 204, 204));
         jPanel1.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
+        productPanel.setBackground(new java.awt.Color(245, 247, 251));
+        productPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jPanel2.setBackground(new java.awt.Color(255, 255, 255));
+        jPanel2.setForeground(new java.awt.Color(255, 255, 255));
+        jPanel2.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        product_tbl.setBackground(new java.awt.Color(238, 242, 255));
+        product_tbl.setForeground(new java.awt.Color(17, 24, 39));
+        product_tbl.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+
+            },
+            new String [] {
+                "Product ID", "Barcode", "Product Name", "Category", "Supplier", "Unit ", "Unit Price", "Cost Price", "Quantity", "Reorder Level", "Status", "Date Added"
+            }
+        ) {
+            boolean[] canEdit = new boolean [] {
+                false, false, false, false, false, false, false, false, false, false, false, false
+            };
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        jScrollPane1.setViewportView(product_tbl);
+        if (product_tbl.getColumnModel().getColumnCount() > 0) {
+            product_tbl.getColumnModel().getColumn(0).setResizable(false);
+            product_tbl.getColumnModel().getColumn(1).setResizable(false);
+            product_tbl.getColumnModel().getColumn(2).setResizable(false);
+            product_tbl.getColumnModel().getColumn(3).setResizable(false);
+            product_tbl.getColumnModel().getColumn(4).setResizable(false);
+            product_tbl.getColumnModel().getColumn(5).setResizable(false);
+            product_tbl.getColumnModel().getColumn(6).setResizable(false);
+            product_tbl.getColumnModel().getColumn(7).setResizable(false);
+            product_tbl.getColumnModel().getColumn(8).setResizable(false);
+            product_tbl.getColumnModel().getColumn(9).setResizable(false);
+            product_tbl.getColumnModel().getColumn(10).setResizable(false);
+            product_tbl.getColumnModel().getColumn(11).setResizable(false);
+        }
+
+        jPanel2.add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 50, 1320, 410));
+
+        addProduct_btn.setBackground(new java.awt.Color(16, 185, 129));
+        addProduct_btn.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        addProduct_btn.setForeground(new java.awt.Color(255, 255, 255));
+        addProduct_btn.setText("Add Product");
+        addProduct_btn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                addProduct_btnActionPerformed(evt);
+            }
+        });
+        jPanel2.add(addProduct_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(920, 10, 130, 30));
+
+        jLabel1.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jLabel1.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel1.setText("Category:");
+        jPanel2.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(380, 0, 60, 50));
+
+        search_txt.setBackground(new java.awt.Color(255, 255, 255));
+        jPanel2.add(search_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 10, 250, 30));
+
+        edit_btn.setBackground(new java.awt.Color(0, 0, 255));
+        edit_btn.setText("EDIT PRODUCT");
+        edit_btn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                edit_btnActionPerformed(evt);
+            }
+        });
+        jPanel2.add(edit_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(1060, 10, 130, 30));
+
+        deleteProduct_btn.setBackground(new java.awt.Color(153, 0, 0));
+        deleteProduct_btn.setText("DELETE PRODUCT");
+        deleteProduct_btn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                deleteProduct_btnActionPerformed(evt);
+            }
+        });
+        jPanel2.add(deleteProduct_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(1200, 10, 130, 30));
+
+        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+        jPanel2.add(jComboBox1, new org.netbeans.lib.awtextra.AbsoluteConstraints(450, 10, 220, 30));
+
+        jLabel33.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        jLabel33.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel33.setText("Search:");
+        jPanel2.add(jLabel33, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 0, 60, 50));
+
+        productPanel.add(jPanel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, 1340, 470));
+
+        jPanel1.add(productPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1360, 500));
+
         userPanel.setBackground(new java.awt.Color(245, 247, 251));
         userPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
@@ -1131,11 +1279,11 @@ public void loadProductsToTable() {
 
             },
             new String [] {
-                "user_id", "first_name", "last_name", "role", "email", "contact_number", "status", "date_created"
+                "user_id", "first_name", "middle_name", "last_name", "role", "email", "contact_number", "status", "date_created"
             }
         ) {
             boolean[] canEdit = new boolean [] {
-                false, false, false, false, false, false, false, false
+                false, false, false, false, false, false, false, false, false
             };
 
             public boolean isCellEditable(int rowIndex, int columnIndex) {
@@ -1152,6 +1300,7 @@ public void loadProductsToTable() {
             user_tbl.getColumnModel().getColumn(5).setResizable(false);
             user_tbl.getColumnModel().getColumn(6).setResizable(false);
             user_tbl.getColumnModel().getColumn(7).setResizable(false);
+            user_tbl.getColumnModel().getColumn(8).setResizable(false);
         }
 
         jPanel4.add(jScrollPane2, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 120, 1070, 310));
@@ -1377,81 +1526,6 @@ public void loadProductsToTable() {
         stockPanel.add(jPanel14, new org.netbeans.lib.awtextra.AbsoluteConstraints(290, 20, 820, 460));
 
         jPanel1.add(stockPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1360, 500));
-
-        productPanel.setBackground(new java.awt.Color(245, 247, 251));
-        productPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-
-        jPanel2.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel2.setForeground(new java.awt.Color(255, 255, 255));
-        jPanel2.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-
-        product_tbl.setBackground(new java.awt.Color(238, 242, 255));
-        product_tbl.setForeground(new java.awt.Color(17, 24, 39));
-        product_tbl.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-
-            },
-            new String [] {
-                "Product ID", "Barcode", "Product Name", "Category", "Supplier", "Unit ", "Unit Price", "Cost Price", "Quantity", "Reorder Level", "Status", "Date Added"
-            }
-        ) {
-            boolean[] canEdit = new boolean [] {
-                false, false, false, false, false, false, false, false, false, false, false, false
-            };
-
-            public boolean isCellEditable(int rowIndex, int columnIndex) {
-                return canEdit [columnIndex];
-            }
-        });
-        jScrollPane1.setViewportView(product_tbl);
-        if (product_tbl.getColumnModel().getColumnCount() > 0) {
-            product_tbl.getColumnModel().getColumn(0).setResizable(false);
-            product_tbl.getColumnModel().getColumn(1).setResizable(false);
-            product_tbl.getColumnModel().getColumn(2).setResizable(false);
-            product_tbl.getColumnModel().getColumn(3).setResizable(false);
-            product_tbl.getColumnModel().getColumn(4).setResizable(false);
-            product_tbl.getColumnModel().getColumn(5).setResizable(false);
-            product_tbl.getColumnModel().getColumn(6).setResizable(false);
-            product_tbl.getColumnModel().getColumn(7).setResizable(false);
-            product_tbl.getColumnModel().getColumn(8).setResizable(false);
-            product_tbl.getColumnModel().getColumn(9).setResizable(false);
-            product_tbl.getColumnModel().getColumn(10).setResizable(false);
-            product_tbl.getColumnModel().getColumn(11).setResizable(false);
-        }
-
-        jPanel2.add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 50, 1320, 410));
-
-        addProduct_btn.setBackground(new java.awt.Color(16, 185, 129));
-        addProduct_btn.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        addProduct_btn.setForeground(new java.awt.Color(255, 255, 255));
-        addProduct_btn.setText("Add Product");
-        addProduct_btn.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                addProduct_btnActionPerformed(evt);
-            }
-        });
-        jPanel2.add(addProduct_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(1060, 10, 130, 30));
-
-        jLabel1.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        jLabel1.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel1.setText("Search:");
-        jPanel2.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 0, 60, 50));
-
-        search_txt.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel2.add(search_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 10, 250, 30));
-
-        edit_btn.setBackground(new java.awt.Color(0, 0, 255));
-        edit_btn.setText("EDIT PRODUCT");
-        edit_btn.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                edit_btnActionPerformed(evt);
-            }
-        });
-        jPanel2.add(edit_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(1200, 10, 130, 30));
-
-        productPanel.add(jPanel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, 1340, 470));
-
-        jPanel1.add(productPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 1360, 500));
 
         reportPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
@@ -1983,24 +2057,26 @@ if (choice == JOptionPane.YES_OPTION) {
     }//GEN-LAST:event_addUser_btnActionPerformed
 
     private void update_btnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_update_btnActionPerformed
-          Integer id = getSelectedUserId();
+         Integer id = getSelectedUserId();
     if (id == null) {
         JOptionPane.showMessageDialog(this, "Please select a user first.");
         return;
     }
 
-    String fullname = getSelectedFullname();
+    String firstName = getSelectedFirstName();
+    String middleName = getSelectedMiddleName();
+    String lastName = getSelectedLastName();
     String role = getSelectedRole();
     String status = getSelectedStatus();
     String email = getSelectedEmail();
     String contact = getSelectedContact();
     String dateCreated = getSelectedDateCreated();
-    String username = fetchUsernameById(id); // still fetch username
+    String username = fetchUsernameById(id);
 
     if (username == null) return;
 
     addUser au = new addUser(this);
-    au.setModeEdit(id, role, status, fullname, email, contact, dateCreated, username);
+    au.setModeEdit(id, role, status, firstName, middleName, lastName, email, contact, dateCreated, username);
     au.setVisible(true);
     }//GEN-LAST:event_update_btnActionPerformed
 
@@ -2046,13 +2122,15 @@ if (choice == JOptionPane.YES_OPTION) {
 
     private void changePass_btnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_changePass_btnActionPerformed
         // TODO add your handling code here:
-         Integer id = getSelectedUserId();
+        Integer id = getSelectedUserId();
     if (id == null) {
         JOptionPane.showMessageDialog(this, "Please select a user first.");
         return;
     }
 
-    String fullname = getSelectedFullname();
+    String firstName = getSelectedFirstName();
+    String middleName = getSelectedMiddleName();
+    String lastName = getSelectedLastName();
     String role = getSelectedRole();
     String status = getSelectedStatus();
     String email = getSelectedEmail();
@@ -2063,7 +2141,7 @@ if (choice == JOptionPane.YES_OPTION) {
     if (username == null) return;
 
     addUser au = new addUser(this);
-    au.setModeChangePassword(id, role, status, fullname, email, contact, dateCreated, username);
+    au.setModeChangePassword(id, role, status, firstName, middleName, lastName, email, contact, dateCreated, username);
     au.setVisible(true);
     }//GEN-LAST:event_changePass_btnActionPerformed
 
@@ -2163,6 +2241,174 @@ if (choice == JOptionPane.YES_OPTION) {
         notifController.toggle();
     }//GEN-LAST:event_notifBell_btnActionPerformed
 
+    private void menu_btnMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_menu_btnMouseClicked
+        // TODO add your handling code here:
+            // TODO add your handling code here:
+     javax.swing.JPopupMenu pop = new javax.swing.JPopupMenu();
+
+javax.swing.JMenuItem miCategories = new javax.swing.JMenuItem("Categories");
+javax.swing.JMenuItem miSupplier   = new javax.swing.JMenuItem("Supplier");
+
+// hover highlight
+java.awt.Color normal = java.awt.Color.WHITE;
+java.awt.Color hover  = new java.awt.Color(235, 235, 235);
+
+miCategories.setOpaque(true);
+miCategories.setBackground(normal);
+miCategories.addMouseListener(new java.awt.event.MouseAdapter() {
+    @Override public void mouseEntered(java.awt.event.MouseEvent e) {
+        miCategories.setBackground(hover);
+    }
+    @Override public void mouseExited(java.awt.event.MouseEvent e) {
+        miCategories.setBackground(normal);
+    }
+});
+
+miSupplier.setOpaque(true);
+miSupplier.setBackground(normal);
+miSupplier.addMouseListener(new java.awt.event.MouseAdapter() {
+    @Override public void mouseEntered(java.awt.event.MouseEvent e) {
+        miSupplier.setBackground(hover);
+    }
+    @Override public void mouseExited(java.awt.event.MouseEvent e) {
+        miSupplier.setBackground(normal);
+    }
+});
+
+// actions
+miCategories.addActionListener(e -> {
+    CategoriesScreen cs = new CategoriesScreen();
+    cs.setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+    cs.setLocationRelativeTo(this);
+    cs.setVisible(true);
+});
+
+miSupplier.addActionListener(e -> {
+    SupplierScreen ss = new SupplierScreen();
+    ss.setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+    ss.setLocationRelativeTo(this);
+    ss.setVisible(true);
+});
+
+pop.add(miCategories);
+pop.add(miSupplier);
+
+pop.show(navMenu, 0, navMenu.getHeight());
+    }//GEN-LAST:event_menu_btnMouseClicked
+
+    private void navMenuMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_navMenuMouseClicked
+        // TODO add your handling code here:
+     javax.swing.JPopupMenu pop = new javax.swing.JPopupMenu();
+
+javax.swing.JMenuItem miCategories = new javax.swing.JMenuItem("Categories");
+javax.swing.JMenuItem miSupplier   = new javax.swing.JMenuItem("Supplier");
+
+// hover highlight
+java.awt.Color normal = java.awt.Color.WHITE;
+java.awt.Color hover  = new java.awt.Color(235, 235, 235);
+
+miCategories.setOpaque(true);
+miCategories.setBackground(normal);
+miCategories.addMouseListener(new java.awt.event.MouseAdapter() {
+    @Override public void mouseEntered(java.awt.event.MouseEvent e) {
+        miCategories.setBackground(hover);
+    }
+    @Override public void mouseExited(java.awt.event.MouseEvent e) {
+        miCategories.setBackground(normal);
+    }
+});
+
+miSupplier.setOpaque(true);
+miSupplier.setBackground(normal);
+miSupplier.addMouseListener(new java.awt.event.MouseAdapter() {
+    @Override public void mouseEntered(java.awt.event.MouseEvent e) {
+        miSupplier.setBackground(hover);
+    }
+    @Override public void mouseExited(java.awt.event.MouseEvent e) {
+        miSupplier.setBackground(normal);
+    }
+});
+
+// actions
+miCategories.addActionListener(e -> {
+    CategoriesScreen cs = new CategoriesScreen();
+    cs.setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+    cs.setLocationRelativeTo(this);
+    cs.setVisible(true);
+});
+
+miSupplier.addActionListener(e -> {
+    SupplierScreen ss = new SupplierScreen();
+    ss.setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+    ss.setLocationRelativeTo(this);
+    ss.setVisible(true);
+});
+
+pop.add(miCategories);
+pop.add(miSupplier);
+
+pop.show(navMenu, 0, navMenu.getHeight());
+    }//GEN-LAST:event_navMenuMouseClicked
+
+    private void master_txtMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_master_txtMouseClicked
+        // TODO add your handling code here:
+            // TODO add your handling code here:
+     javax.swing.JPopupMenu pop = new javax.swing.JPopupMenu();
+
+javax.swing.JMenuItem miCategories = new javax.swing.JMenuItem("Categories");
+javax.swing.JMenuItem miSupplier   = new javax.swing.JMenuItem("Supplier");
+
+// hover highlight
+java.awt.Color normal = java.awt.Color.WHITE;
+java.awt.Color hover  = new java.awt.Color(235, 235, 235);
+
+miCategories.setOpaque(true);
+miCategories.setBackground(normal);
+miCategories.addMouseListener(new java.awt.event.MouseAdapter() {
+    @Override public void mouseEntered(java.awt.event.MouseEvent e) {
+        miCategories.setBackground(hover);
+    }
+    @Override public void mouseExited(java.awt.event.MouseEvent e) {
+        miCategories.setBackground(normal);
+    }
+});
+
+miSupplier.setOpaque(true);
+miSupplier.setBackground(normal);
+miSupplier.addMouseListener(new java.awt.event.MouseAdapter() {
+    @Override public void mouseEntered(java.awt.event.MouseEvent e) {
+        miSupplier.setBackground(hover);
+    }
+    @Override public void mouseExited(java.awt.event.MouseEvent e) {
+        miSupplier.setBackground(normal);
+    }
+});
+
+// actions
+miCategories.addActionListener(e -> {
+    CategoriesScreen cs = new CategoriesScreen();
+    cs.setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+    cs.setLocationRelativeTo(this);
+    cs.setVisible(true);
+});
+
+miSupplier.addActionListener(e -> {
+    SupplierScreen ss = new SupplierScreen();
+    ss.setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+    ss.setLocationRelativeTo(this);
+    ss.setVisible(true);
+});
+
+pop.add(miCategories);
+pop.add(miSupplier);
+
+pop.show(navMenu, 0, navMenu.getHeight());
+    }//GEN-LAST:event_master_txtMouseClicked
+
+    private void deleteProduct_btnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteProduct_btnActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_deleteProduct_btnActionPerformed
+
     
     
     /**
@@ -2214,6 +2460,7 @@ if (choice == JOptionPane.YES_OPTION) {
     private javax.swing.JComboBox<String> categoryMovement_cmb;
     private javax.swing.JButton changePass_btn;
     private javax.swing.JPanel dashboardNav;
+    private javax.swing.JButton deleteProduct_btn;
     private javax.swing.JButton delete_btn;
     private javax.swing.JButton edit_btn;
     private javax.swing.JPanel footer;
@@ -2225,6 +2472,7 @@ if (choice == JOptionPane.YES_OPTION) {
     private javax.swing.JButton inventoryStatus_btn;
     private javax.swing.JTable inventoryStatus_tbl;
     private javax.swing.JTable inventory_tbl;
+    private javax.swing.JComboBox<String> jComboBox1;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel11;
@@ -2251,6 +2499,7 @@ if (choice == JOptionPane.YES_OPTION) {
     private javax.swing.JLabel jLabel30;
     private javax.swing.JLabel jLabel31;
     private javax.swing.JLabel jLabel32;
+    private javax.swing.JLabel jLabel33;
     private javax.swing.JLabel jLabel34;
     private javax.swing.JLabel jLabel35;
     private javax.swing.JLabel jLabel36;
@@ -2293,7 +2542,7 @@ if (choice == JOptionPane.YES_OPTION) {
     private javax.swing.JLabel lblProducts;
     private javax.swing.JLabel lblReports;
     private javax.swing.JLabel lblReportsIcon;
-    private javax.swing.JLabel lblStock;
+    private javax.swing.JLabel lblStock1;
     private javax.swing.JLabel lblStocksIcon;
     private javax.swing.JLabel lblUsers;
     private javax.swing.JLabel lblUsersIcon;
@@ -2304,8 +2553,11 @@ if (choice == JOptionPane.YES_OPTION) {
     private javax.swing.JButton lowStock_btn;
     private javax.swing.JTable lowStock_tbl;
     private javax.swing.JButton lowStockrefresh_btn;
+    private javax.swing.JLabel master_txt;
+    private javax.swing.JLabel menu_btn;
     private javax.swing.JComboBox<String> movementType_txt;
     private javax.swing.JPanel navInventory;
+    private javax.swing.JPanel navMenu;
     private javax.swing.JPanel navPosController;
     private javax.swing.JPanel navProducts;
     private javax.swing.JPanel navReports;

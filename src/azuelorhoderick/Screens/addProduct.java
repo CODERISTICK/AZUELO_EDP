@@ -246,6 +246,13 @@ private boolean validateForm() {
         dateAdded_txt = new com.toedter.calendar.JDateChooser();
         jLabel12 = new javax.swing.JLabel();
         supplier_cmb = new javax.swing.JComboBox<>();
+        autoGenerateBarcode_rbt = new javax.swing.JRadioButton();
+        jLabel15 = new javax.swing.JLabel();
+        jLabel16 = new javax.swing.JLabel();
+        jPanel7 = new javax.swing.JPanel();
+        image_lbl = new javax.swing.JLabel();
+        RemoveImage_btn = new javax.swing.JButton();
+        chooseImage_btn = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Product Manager");
@@ -306,7 +313,7 @@ private boolean validateForm() {
 
         jLabel1.setForeground(new java.awt.Color(0, 0, 0));
         jLabel1.setText("Category:");
-        jPanel1.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 90, 70, 30));
+        jPanel1.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 130, 70, 30));
 
         jLabel2.setForeground(new java.awt.Color(0, 0, 0));
         jLabel2.setText("Product Name:");
@@ -314,66 +321,66 @@ private boolean validateForm() {
 
         jLabel3.setForeground(new java.awt.Color(0, 0, 0));
         jLabel3.setText("Cost Price:");
-        jPanel1.add(jLabel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 370, 70, 30));
+        jPanel1.add(jLabel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 270, 70, 30));
 
         productName_txt.setBackground(new java.awt.Color(255, 255, 255));
         jPanel1.add(productName_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 50, 240, 30));
 
         category_cmb.setBackground(new java.awt.Color(255, 255, 255));
         category_cmb.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Chocolate & Candy", "Coffee", "Chips", "Biscuits & Cookies", "Instant Noodles", "Shampoo", "Soap", "Toothpaste", "Lotion", "Deodorant" }));
-        jPanel1.add(category_cmb, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 90, 240, 30));
+        jPanel1.add(category_cmb, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 130, 240, 30));
 
         jLabel13.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
         jLabel13.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel13.setText("Additional Information");
-        jPanel1.add(jLabel13, new org.netbeans.lib.awtextra.AbsoluteConstraints(380, 180, 230, 20));
+        jLabel13.setText("PRODUCT IMAGE");
+        jPanel1.add(jLabel13, new org.netbeans.lib.awtextra.AbsoluteConstraints(390, 220, 230, 20));
 
         jPanel4.setBackground(new java.awt.Color(204, 204, 255));
         jPanel4.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-        jPanel1.add(jPanel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 30, 250, 1));
+        jPanel1.add(jPanel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, -140, 250, 1));
 
         jPanel5.setBackground(new java.awt.Color(204, 204, 255));
         jPanel5.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-        jPanel1.add(jPanel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 280, 260, 1));
+        jPanel1.add(jPanel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 260, 260, 1));
 
         jLabel4.setForeground(new java.awt.Color(0, 0, 0));
         jLabel4.setText("Description:");
-        jPanel1.add(jLabel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 120, 90, 30));
+        jPanel1.add(jLabel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 170, 90, 30));
 
         costPrice_txt.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel1.add(costPrice_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 370, 240, 30));
+        jPanel1.add(costPrice_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 270, 240, 30));
 
         jLabel5.setForeground(new java.awt.Color(0, 0, 0));
         jLabel5.setText("Supplier:");
-        jPanel1.add(jLabel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(380, 260, 100, 30));
+        jPanel1.add(jLabel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(390, 90, 100, 30));
 
         jLabel6.setForeground(new java.awt.Color(0, 0, 0));
         jLabel6.setText("Unit Price:");
-        jPanel1.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 330, 70, 30));
+        jPanel1.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 310, 70, 30));
 
         unitPrice_txt.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel1.add(unitPrice_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 330, 240, 30));
+        jPanel1.add(unitPrice_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 310, 240, 30));
 
         description_txt.setBackground(new java.awt.Color(255, 255, 255));
         description_txt.setColumns(20);
         description_txt.setRows(5);
         jScrollPane1.setViewportView(description_txt);
 
-        jPanel1.add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 130, 240, 140));
+        jPanel1.add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 170, 240, -1));
 
         jLabel7.setForeground(new java.awt.Color(0, 0, 0));
         jLabel7.setText("Barcode:");
-        jPanel1.add(jLabel7, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 290, 70, 30));
+        jPanel1.add(jLabel7, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 90, 70, 30));
 
         jLabel8.setForeground(new java.awt.Color(0, 0, 0));
         jLabel8.setText("Stock Quantity:");
-        jPanel1.add(jLabel8, new org.netbeans.lib.awtextra.AbsoluteConstraints(380, 50, 90, 30));
+        jPanel1.add(jLabel8, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 350, 90, 30));
 
         barcode_txt.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel1.add(barcode_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 290, 240, 30));
+        jPanel1.add(barcode_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 90, 120, 30));
 
         quantity_txt.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel1.add(quantity_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(480, 50, 240, 30));
+        jPanel1.add(quantity_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 350, 240, 30));
 
         jLabel14.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
         jLabel14.setForeground(new java.awt.Color(0, 0, 0));
@@ -382,40 +389,75 @@ private boolean validateForm() {
 
         jPanel6.setBackground(new java.awt.Color(204, 204, 255));
         jPanel6.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-        jPanel1.add(jPanel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(380, 200, 280, 1));
+        jPanel1.add(jPanel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(390, 210, 280, 1));
 
         jLabel9.setForeground(new java.awt.Color(0, 0, 0));
         jLabel9.setText("Reorder Level:");
-        jPanel1.add(jLabel9, new org.netbeans.lib.awtextra.AbsoluteConstraints(380, 90, 90, 30));
+        jPanel1.add(jLabel9, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 390, 90, 30));
 
         jLabel10.setForeground(new java.awt.Color(0, 0, 0));
         jLabel10.setText("Unit of Measure:");
-        jPanel1.add(jLabel10, new org.netbeans.lib.awtextra.AbsoluteConstraints(380, 220, 100, 30));
+        jPanel1.add(jLabel10, new org.netbeans.lib.awtextra.AbsoluteConstraints(390, 50, 100, 30));
 
         jLabel11.setForeground(new java.awt.Color(0, 0, 0));
         jLabel11.setText("Status:");
-        jPanel1.add(jLabel11, new org.netbeans.lib.awtextra.AbsoluteConstraints(380, 300, 100, 40));
+        jPanel1.add(jLabel11, new org.netbeans.lib.awtextra.AbsoluteConstraints(390, 130, 100, 40));
 
         status_cmb.setBackground(new java.awt.Color(255, 255, 255));
         status_cmb.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Available", "Out of Stock" }));
-        jPanel1.add(status_cmb, new org.netbeans.lib.awtextra.AbsoluteConstraints(480, 300, 240, 30));
+        jPanel1.add(status_cmb, new org.netbeans.lib.awtextra.AbsoluteConstraints(490, 130, 240, 30));
 
         unitMeasure_cmb.setBackground(new java.awt.Color(255, 255, 255));
         unitMeasure_cmb.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Piece", "Pack", "Box", "Bottle", "Can", "Sachet", "Tube", "Cup", "Pouch" }));
-        jPanel1.add(unitMeasure_cmb, new org.netbeans.lib.awtextra.AbsoluteConstraints(480, 220, 240, 30));
+        jPanel1.add(unitMeasure_cmb, new org.netbeans.lib.awtextra.AbsoluteConstraints(490, 50, 240, 30));
 
         reorderLevel_txt.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel1.add(reorderLevel_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(480, 90, 240, 30));
+        jPanel1.add(reorderLevel_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 390, 240, 30));
 
         dateAdded_txt.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel1.add(dateAdded_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(480, 340, 240, 30));
+        jPanel1.add(dateAdded_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(490, 170, 240, 30));
 
         jLabel12.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel12.setText("Date Added:");
-        jPanel1.add(jLabel12, new org.netbeans.lib.awtextra.AbsoluteConstraints(380, 330, 100, 50));
+        jLabel12.setText("Image Preview:");
+        jPanel1.add(jLabel12, new org.netbeans.lib.awtextra.AbsoluteConstraints(390, 250, 100, 20));
 
         supplier_cmb.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel1.add(supplier_cmb, new org.netbeans.lib.awtextra.AbsoluteConstraints(480, 260, 240, 30));
+        jPanel1.add(supplier_cmb, new org.netbeans.lib.awtextra.AbsoluteConstraints(490, 90, 240, 30));
+
+        autoGenerateBarcode_rbt.setForeground(new java.awt.Color(0, 0, 0));
+        autoGenerateBarcode_rbt.setText("Auto- Generate");
+        jPanel1.add(autoGenerateBarcode_rbt, new org.netbeans.lib.awtextra.AbsoluteConstraints(240, 91, -1, 30));
+
+        jLabel15.setFont(new java.awt.Font("Segoe UI", 0, 18)); // NOI18N
+        jLabel15.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel15.setText("Additional Information");
+        jPanel1.add(jLabel15, new org.netbeans.lib.awtextra.AbsoluteConstraints(390, 10, 230, 20));
+
+        jLabel16.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel16.setText("Date Added:");
+        jPanel1.add(jLabel16, new org.netbeans.lib.awtextra.AbsoluteConstraints(390, 160, 100, 50));
+
+        jPanel7.setBackground(new java.awt.Color(255, 255, 255));
+        jPanel7.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+        jPanel7.add(image_lbl, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 250, 120));
+
+        RemoveImage_btn.setText("Remove");
+        RemoveImage_btn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                RemoveImage_btnActionPerformed(evt);
+            }
+        });
+        jPanel7.add(RemoveImage_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(130, 130, 110, 30));
+
+        chooseImage_btn.setText("Choose Image");
+        chooseImage_btn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                chooseImage_btnActionPerformed(evt);
+            }
+        });
+        jPanel7.add(chooseImage_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 130, 110, 30));
+
+        jPanel1.add(jPanel7, new org.netbeans.lib.awtextra.AbsoluteConstraints(480, 250, 250, 170));
 
         getContentPane().add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 750, 498));
 
@@ -693,6 +735,14 @@ private boolean validateForm() {
     if (choice == JOptionPane.YES_OPTION) dispose();
     }//GEN-LAST:event_exit_btnActionPerformed
 
+    private void RemoveImage_btnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RemoveImage_btnActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_RemoveImage_btnActionPerformed
+
+    private void chooseImage_btnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chooseImage_btnActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_chooseImage_btnActionPerformed
+
     
    public static void main(String args[]) {
     try {
@@ -710,20 +760,26 @@ private boolean validateForm() {
 }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton RemoveImage_btn;
     private javax.swing.JButton add_btn;
+    private javax.swing.JRadioButton autoGenerateBarcode_rbt;
     private javax.swing.JTextField barcode_txt;
     private javax.swing.JComboBox<String> category_cmb;
+    private javax.swing.JButton chooseImage_btn;
     private javax.swing.JButton clear_btn;
     private javax.swing.JTextField costPrice_txt;
     private com.toedter.calendar.JDateChooser dateAdded_txt;
     private javax.swing.JTextArea description_txt;
     private javax.swing.JButton exit_btn;
+    private javax.swing.JLabel image_lbl;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel11;
     private javax.swing.JLabel jLabel12;
     private javax.swing.JLabel jLabel13;
     private javax.swing.JLabel jLabel14;
+    private javax.swing.JLabel jLabel15;
+    private javax.swing.JLabel jLabel16;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
@@ -738,6 +794,7 @@ private boolean validateForm() {
     private javax.swing.JPanel jPanel4;
     private javax.swing.JPanel jPanel5;
     private javax.swing.JPanel jPanel6;
+    private javax.swing.JPanel jPanel7;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTextField productName_txt;
     private javax.swing.JTextField quantity_txt;

@@ -1,214 +1,220 @@
 package azuelorhoderick.Screens;
 
 import javax.swing.JOptionPane;
-
 import azuelorhoderick.DBConnection;
 import javax.swing.*;
 import java.sql.*;
-
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-
-
 import org.mindrot.jbcrypt.BCrypt;
 
 public class addUser extends javax.swing.JFrame {
 
-    private Dashboard dashboard; // reference to dashboard
+    private Dashboard dashboard;
 
-    // modes
     private enum Mode { ADD, EDIT, CHANGE_PASSWORD }
     private Mode mode = Mode.ADD;
 
-    // selected user id for edit/change pass
     private int userId = -1;
+
+    private static final java.util.logging.Logger logger =
+        java.util.logging.Logger.getLogger(addUser.class.getName());
 
     public addUser(Dashboard dashboard) {
         initComponents();
         this.dashboard = dashboard;
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setLocationRelativeTo(dashboard);
+        setupContactNumberValidation();
         setModeAdd();
     }
 
-    // ========= PUBLIC SETTERS FOR DASHBOARD =========
-    
     public addUser() {
-    initComponents();
-    setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-    setLocationRelativeTo(null);
-    setModeAdd(); // works even without dashboard
-}
-    
-    private static final java.util.logging.Logger logger =
-        java.util.logging.Logger.getLogger(addUser.class.getName());
-
-
+        initComponents();
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+        setLocationRelativeTo(null);
+        setupContactNumberValidation();
+        setModeAdd();
+    }
 
     public void setModeAdd() {
-    mode = Mode.ADD;
-    userId = -1;
+        mode = Mode.ADD;
+        userId = -1;
 
-    role_cmb.setEnabled(true);
-    status_cmb.setEnabled(true);
+        role_cmb.setEnabled(true);
+        status_cmb.setEnabled(true);
 
-    firstname_txt.setEditable(true);
-    lastname_txt.setEditable(true);
-    email_txt.setEditable(true);
-    contactNum_txt.setEditable(true);
+        firstname_txt.setEditable(true);
+        middlename_txt.setEditable(true);
+        lastname_txt.setEditable(true);
+        email_txt.setEditable(true);
+        contactNum_txt.setEditable(true);
 
-    username_txt.setEditable(true);
-    password_txt.setEditable(true);
-    password_txt.setEnabled(true);
+        username_txt.setEditable(true);
+        password_txt.setEditable(true);
+        password_txt.setEnabled(true);
 
-    clearFields(); //error
-    setDateCreatedNow();
+        clearFields();
+        setDateCreatedNow();
 
-    Register_btn.setLabel("REGISTER");
-    setTitle("Add User");
-}
+        Register_btn.setLabel("REGISTER");
+        setTitle("Add User");
+    }
 
+    public void setModeEdit(int id, String role, String status,
+                            String firstName, String middleName, String lastName,
+                            String email, String contact, String dateCreated, String username) {
 
-    public void setModeEdit(int id, String role, String status, String fullname,
-                        String email, String contact, String dateCreated, String username) {
+        mode = Mode.EDIT;
+        userId = id;
 
-    mode = Mode.EDIT;
-    userId = id;
+        role_cmb.setSelectedItem(role);
+        status_cmb.setSelectedItem(status);
 
-    String[] parts = fullname.trim().split("\\s+", 2);
-    String first = parts.length > 0 ? parts[0] : "";
-    String last  = parts.length > 1 ? parts[1] : "";
+        firstname_txt.setText(firstName);
+        middlename_txt.setText(middleName);
+        lastname_txt.setText(lastName);
+        email_txt.setText(email);
+        contactNum_txt.setText(contact);
+        dateCreated_txt.setText(dateCreated);
 
-    role_cmb.setSelectedItem(role);
-    status_cmb.setSelectedItem(status);
+        username_txt.setText(username);
+        password_txt.setText("");
 
-    firstname_txt.setText(first);
-    lastname_txt.setText(last);
-    email_txt.setText(email);
-    contactNum_txt.setText(contact);
-    dateCreated_txt.setText(dateCreated);
+        role_cmb.setEnabled(true);
+        status_cmb.setEnabled(true);
 
-    username_txt.setText(username);
-    password_txt.setText("");
+        firstname_txt.setEditable(true);
+        middlename_txt.setEditable(true);
+        lastname_txt.setEditable(true);
+        email_txt.setEditable(true);
+        contactNum_txt.setEditable(true);
 
-    // fields editable in update:
-    role_cmb.setEnabled(true);
-    status_cmb.setEnabled(true);
-    firstname_txt.setEditable(true);
-    lastname_txt.setEditable(true);
-    email_txt.setEditable(true);
-    contactNum_txt.setEditable(true);
+        username_txt.setEditable(false);
+        username_txt.setEnabled(false);
 
-    // username & password NOT editable
-    username_txt.setEditable(false);
-    username_txt.setEnabled(false);
+        password_txt.setEditable(false);
+        password_txt.setEnabled(false);
 
-    password_txt.setEditable(false);
-    password_txt.setEnabled(false);
+        dateCreated_txt.setEditable(false);
+        dateCreated_txt.setEnabled(false);
 
-    // date created locked
-    dateCreated_txt.setEditable(false);
-    dateCreated_txt.setEnabled(false);
+        Register_btn.setLabel("UPDATE");
+        setTitle("Update User");
+    }
 
-    Register_btn.setLabel("UPDATE");
-    setTitle("Update User");
-}
-    
-    
+    public void setModeChangePassword(int id, String role, String status,
+                                      String firstName, String middleName, String lastName,
+                                      String email, String contact, String dateCreated, String username) {
+
+        mode = Mode.CHANGE_PASSWORD;
+        userId = id;
+
+        role_cmb.setSelectedItem(role);
+        status_cmb.setSelectedItem(status);
+
+        firstname_txt.setText(firstName);
+        middlename_txt.setText(middleName);
+        lastname_txt.setText(lastName);
+        email_txt.setText(email);
+        contactNum_txt.setText(contact);
+        dateCreated_txt.setText(dateCreated);
+
+        username_txt.setText(username);
+        password_txt.setText("");
+
+        role_cmb.setEnabled(false);
+        status_cmb.setEnabled(false);
+
+        firstname_txt.setEditable(false);
+        middlename_txt.setEditable(false);
+        lastname_txt.setEditable(false);
+        email_txt.setEditable(false);
+        contactNum_txt.setEditable(false);
+
+        dateCreated_txt.setEditable(false);
+        dateCreated_txt.setEnabled(false);
+
+        username_txt.setEnabled(true);
+        username_txt.setEditable(true);
+
+        password_txt.setEnabled(true);
+        password_txt.setEditable(true);
+
+        Register_btn.setLabel("CHANGE PASSWORD");
+        setTitle("Change Password");
+    }
+
     private void clearFields() {
-    // reset combo boxes
-    if (role_cmb.getItemCount() > 0) role_cmb.setSelectedIndex(0);
-    if (status_cmb.getItemCount() > 0) status_cmb.setSelectedIndex(0);
+        if (role_cmb.getItemCount() > 0) role_cmb.setSelectedIndex(0);
+        if (status_cmb.getItemCount() > 0) status_cmb.setSelectedIndex(0);
 
-    // clear textfields
-    firstname_txt.setText("");
-    lastname_txt.setText("");
-    email_txt.setText("");
-    contactNum_txt.setText("");
-    username_txt.setText("");
-    password_txt.setText("");
+        firstname_txt.setText("");
+        middlename_txt.setText("");
+        lastname_txt.setText("");
+        email_txt.setText("");
+        contactNum_txt.setText("");
+        username_txt.setText("");
+        password_txt.setText("");
+        dateCreated_txt.setText("");
 
-    // clear dateCreated (you will fill it using setDateCreatedNow())
-    dateCreated_txt.setText("");
+        username_txt.setEnabled(true);
+        username_txt.setEditable(true);
 
-    // re-enable fields (important when coming from EDIT/CHANGE_PASSWORD mode)
-    username_txt.setEnabled(true);
-    username_txt.setEditable(true);
+        password_txt.setEnabled(true);
+        password_txt.setEditable(true);
 
-    password_txt.setEnabled(true);
-    password_txt.setEditable(true);
+        dateCreated_txt.setEnabled(true);
+        dateCreated_txt.setEditable(false);
+    }
 
-    dateCreated_txt.setEnabled(true);
-    dateCreated_txt.setEditable(false); // always readonly
-}
-
-
-
-    public void setModeChangePassword(int id, String role, String status, String fullname,
-                                  String email, String contact, String dateCreated, String username) {
-
-    mode = Mode.CHANGE_PASSWORD;
-    userId = id;
-
-    String[] parts = fullname.trim().split("\\s+", 2);
-    String first = parts.length > 0 ? parts[0] : "";
-    String last  = parts.length > 1 ? parts[1] : "";
-
-    role_cmb.setSelectedItem(role);
-    status_cmb.setSelectedItem(status);
-
-    firstname_txt.setText(first);
-    lastname_txt.setText(last);
-    email_txt.setText(email);
-    contactNum_txt.setText(contact);
-    dateCreated_txt.setText(dateCreated);
-
-    username_txt.setText(username);
-    password_txt.setText("");
-
-    // lock everything except username + password
-    role_cmb.setEnabled(false);
-    status_cmb.setEnabled(false);
-
-    firstname_txt.setEditable(false);
-    lastname_txt.setEditable(false);
-    email_txt.setEditable(false);
-    contactNum_txt.setEditable(false);
-
-    dateCreated_txt.setEditable(false);
-    dateCreated_txt.setEnabled(false);
-
-    // ONLY username & password editable
-    username_txt.setEnabled(true);
-    username_txt.setEditable(true);
-
-    password_txt.setEnabled(true);
-    password_txt.setEditable(true);
-
-    Register_btn.setLabel("CHANGE PASSWORD");
-    setTitle("Change Password");
-}
-
-
-
-    
     private void setDateCreatedNow() {
-    // PH time
-    ZoneId ph = ZoneId.of("Asia/Manila");
+        ZoneId ph = ZoneId.of("Asia/Manila");
+        DateTimeFormatter displayFmt = DateTimeFormatter.ofPattern("MM/dd/yyyy hh:mm a");
+        String nowDisplay = LocalDateTime.now(ph).format(displayFmt);
+        dateCreated_txt.setText(nowDisplay);
+        dateCreated_txt.setEditable(false);
+    }
 
-    // Display format in the textfield (example: 11/02/2026 03:25 PM)
-    DateTimeFormatter displayFmt = DateTimeFormatter.ofPattern("MM/dd/yyyy hh:mm a");
+    private void setupContactNumberValidation() {
+        contactNum_txt.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyTyped(java.awt.event.KeyEvent evt) {
+                char c = evt.getKeyChar();
+                String text = contactNum_txt.getText();
 
-    String nowDisplay = LocalDateTime.now(ph).format(displayFmt);
-    dateCreated_txt.setText(nowDisplay);
+                if (!Character.isDigit(c) || text.length() >= 11) {
+                    evt.consume();
+                }
+            }
+        });
+    }
 
-    // user should not edit this
-    dateCreated_txt.setEditable(false);
-}
+    private String normalizeRoleForDB(String roleUI) {
+        if (roleUI == null) return "Staff";
 
-    
-    
+        String r = roleUI.trim();
+
+        if (r.equalsIgnoreCase("Inventory Staff")) return "Staff";
+        if (r.equalsIgnoreCase("Staff")) return "Staff";
+        if (r.equalsIgnoreCase("Admin")) return "Admin";
+        if (r.equalsIgnoreCase("Cashier")) return "Cashier";
+
+        return "Staff";
+    }
+
+    private String normalizeStatusForDB(String statusUI) {
+        if (statusUI == null) return "Active";
+
+        String s = statusUI.trim();
+
+        if (s.equalsIgnoreCase("Not Active")) return "Inactive";
+        if (s.equalsIgnoreCase("Inactive")) return "Inactive";
+        if (s.equalsIgnoreCase("Active")) return "Active";
+
+        return "Active";
+    }
 
     
     @SuppressWarnings("unchecked")
@@ -232,39 +238,43 @@ public class addUser extends javax.swing.JFrame {
         status_cmb = new javax.swing.JComboBox<>();
         jLabel8 = new javax.swing.JLabel();
         email_txt = new javax.swing.JTextField();
-        jLabel9 = new javax.swing.JLabel();
+        lbl = new javax.swing.JLabel();
         lastname_txt = new javax.swing.JTextField();
         jLabel10 = new javax.swing.JLabel();
         contactNum_txt = new javax.swing.JTextField();
         jLabel11 = new javax.swing.JLabel();
         dateCreated_txt = new javax.swing.JTextField();
+        jLabel12 = new javax.swing.JLabel();
+        middlename_txt = new javax.swing.JTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setMaximumSize(new java.awt.Dimension(530, 333));
-        setMinimumSize(new java.awt.Dimension(530, 333));
+        setMaximumSize(new java.awt.Dimension(607, 360));
+        setMinimumSize(new java.awt.Dimension(607, 360));
+        setPreferredSize(new java.awt.Dimension(607, 360));
         setResizable(false);
+        getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         jPanel1.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel1.setMaximumSize(new java.awt.Dimension(530, 333));
-        jPanel1.setMinimumSize(new java.awt.Dimension(530, 333));
+        jPanel1.setMaximumSize(new java.awt.Dimension(607, 333));
+        jPanel1.setMinimumSize(new java.awt.Dimension(607, 333));
         jPanel1.setName(""); // NOI18N
-        jPanel1.setPreferredSize(new java.awt.Dimension(530, 333));
+        jPanel1.setPreferredSize(new java.awt.Dimension(607, 333));
         jPanel1.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         jLabel1.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
         jLabel1.setForeground(new java.awt.Color(0, 0, 0));
         jLabel1.setText("Password:");
-        jPanel1.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(280, 180, 70, 30));
+        jPanel1.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(220, 210, 70, 20));
 
         jLabel5.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
         jLabel5.setForeground(new java.awt.Color(0, 0, 0));
         jLabel5.setText("Email:");
-        jPanel1.add(jLabel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 140, 50, 30));
+        jPanel1.add(jLabel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 140, 40, 30));
 
         jLabel4.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
         jLabel4.setForeground(new java.awt.Color(0, 0, 0));
         jLabel4.setText("Last Name:");
-        jPanel1.add(jLabel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(280, 100, 90, 30));
+        jPanel1.add(jLabel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(420, 90, 70, 20));
 
         jLabel3.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
         jLabel3.setForeground(new java.awt.Color(0, 0, 0));
@@ -274,16 +284,16 @@ public class addUser extends javax.swing.JFrame {
         role_cmb.setBackground(new java.awt.Color(255, 255, 255));
         role_cmb.setForeground(new java.awt.Color(0, 0, 0));
         role_cmb.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Admin", "Cashier", "Inventory Staff" }));
-        jPanel1.add(role_cmb, new org.netbeans.lib.awtextra.AbsoluteConstraints(90, 60, 180, 30));
+        jPanel1.add(role_cmb, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 50, 180, 30));
 
         firstname_txt.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel1.add(firstname_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(90, 100, 180, 30));
+        jPanel1.add(firstname_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 110, 180, 30));
 
         password_txt.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel1.add(password_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(350, 180, 170, 30));
+        jPanel1.add(password_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(220, 230, 170, 30));
 
         username_txt.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel1.add(username_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(90, 180, 180, 30));
+        jPanel1.add(username_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 230, 180, 30));
 
         Register_btn.setBackground(new java.awt.Color(0, 0, 255));
         Register_btn.setLabel("REGISTER");
@@ -292,7 +302,7 @@ public class addUser extends javax.swing.JFrame {
                 Register_btnActionPerformed(evt);
             }
         });
-        jPanel1.add(Register_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(230, 270, 140, 30));
+        jPanel1.add(Register_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(160, 280, 140, 30));
 
         cancel_btn.setBackground(new java.awt.Color(255, 255, 255));
         cancel_btn.setForeground(new java.awt.Color(0, 0, 0));
@@ -302,12 +312,12 @@ public class addUser extends javax.swing.JFrame {
                 cancel_btnActionPerformed(evt);
             }
         });
-        jPanel1.add(cancel_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(380, 270, 140, 30));
+        jPanel1.add(cancel_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(310, 280, 140, 30));
 
         jLabel6.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jLabel6.setForeground(new java.awt.Color(0, 0, 0));
         jLabel6.setText("Status:");
-        jPanel1.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(280, 60, 50, 30));
+        jPanel1.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(290, 50, 50, 30));
 
         jPanel2.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
         jPanel1.add(jPanel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 30, 510, 1));
@@ -315,54 +325,54 @@ public class addUser extends javax.swing.JFrame {
         jLabel7.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jLabel7.setForeground(new java.awt.Color(0, 0, 0));
         jLabel7.setText("Role:");
-        jPanel1.add(jLabel7, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 60, 40, 30));
+        jPanel1.add(jLabel7, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 50, 40, 30));
 
         status_cmb.setBackground(new java.awt.Color(255, 255, 255));
         status_cmb.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Active", "Inactive" }));
-        jPanel1.add(status_cmb, new org.netbeans.lib.awtextra.AbsoluteConstraints(350, 60, 170, 30));
+        jPanel1.add(status_cmb, new org.netbeans.lib.awtextra.AbsoluteConstraints(350, 50, 170, 30));
 
         jLabel8.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
         jLabel8.setForeground(new java.awt.Color(0, 0, 0));
         jLabel8.setText("Date Created:");
-        jPanel1.add(jLabel8, new org.netbeans.lib.awtextra.AbsoluteConstraints(260, 220, -1, 30));
+        jPanel1.add(jLabel8, new org.netbeans.lib.awtextra.AbsoluteConstraints(410, 210, -1, 20));
 
         email_txt.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel1.add(email_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(90, 140, 430, 30));
+        jPanel1.add(email_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 170, 280, 30));
 
-        jLabel9.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
-        jLabel9.setForeground(new java.awt.Color(0, 0, 0));
-        jLabel9.setText("First Name:");
-        jPanel1.add(jLabel9, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 100, 90, 30));
+        lbl.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
+        lbl.setForeground(new java.awt.Color(0, 0, 0));
+        lbl.setText("Middle Name:");
+        jPanel1.add(lbl, new org.netbeans.lib.awtextra.AbsoluteConstraints(210, 90, 90, 20));
 
         lastname_txt.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel1.add(lastname_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(350, 100, 170, 30));
+        jPanel1.add(lastname_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(420, 110, 170, 30));
 
         jLabel10.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
         jLabel10.setForeground(new java.awt.Color(0, 0, 0));
         jLabel10.setText("Username:");
-        jPanel1.add(jLabel10, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 180, 90, 30));
+        jPanel1.add(jLabel10, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 210, 90, 20));
 
         contactNum_txt.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel1.add(contactNum_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(90, 220, 160, 30));
+        jPanel1.add(contactNum_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(310, 170, 280, 30));
 
         jLabel11.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
         jLabel11.setForeground(new java.awt.Color(0, 0, 0));
         jLabel11.setText("Contact #:");
-        jPanel1.add(jLabel11, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 220, 90, 30));
+        jPanel1.add(jLabel11, new org.netbeans.lib.awtextra.AbsoluteConstraints(310, 150, 90, 20));
 
         dateCreated_txt.setBackground(new java.awt.Color(255, 255, 255));
-        jPanel1.add(dateCreated_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(350, 220, 170, 30));
+        jPanel1.add(dateCreated_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(410, 230, 180, 30));
 
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
-        getContentPane().setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-        );
+        jLabel12.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
+        jLabel12.setForeground(new java.awt.Color(0, 0, 0));
+        jLabel12.setText("First Name:");
+        jPanel1.add(jLabel12, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 90, 90, 20));
+
+        middlename_txt.setBackground(new java.awt.Color(255, 255, 255));
+        middlename_txt.setForeground(new java.awt.Color(0, 0, 0));
+        jPanel1.add(middlename_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(210, 110, 200, 30));
+
+        getContentPane().add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 607, 360));
 
         pack();
         setLocationRelativeTo(null);
@@ -370,186 +380,167 @@ public class addUser extends javax.swing.JFrame {
 
     private void cancel_btnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cancel_btnActionPerformed
         // TODO add your handling code here:
-        int choice = JOptionPane.showConfirmDialog(
-        this,
-        "Are you sure you want to go back to Dashboard?",
-        "Confirm Exit",
-        JOptionPane.YES_NO_OPTION
-    );
+         int choice = JOptionPane.showConfirmDialog(
+            this,
+            "Are you sure you want to go back to Dashboard?",
+            "Confirm Exit",
+            JOptionPane.YES_NO_OPTION
+        );
 
-    if (choice == JOptionPane.YES_OPTION) {
-        this.dispose();
-    }
+        if (choice == JOptionPane.YES_OPTION) {
+            this.dispose();
+        }
     }//GEN-LAST:event_cancel_btnActionPerformed
 
     private void Register_btnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_Register_btnActionPerformed
         // TODO add your handling code here:
-         String roleUI = String.valueOf(role_cmb.getSelectedItem()).trim();
-    String statusUI = String.valueOf(status_cmb.getSelectedItem()).trim();
+        String roleUI = String.valueOf(role_cmb.getSelectedItem()).trim();
+        String statusUI = String.valueOf(status_cmb.getSelectedItem()).trim();
 
-    // Normalize to DB ENUM values
-    String role = normalizeRoleForDB(roleUI);        // Admin / Cashier / Staff
-    String status = normalizeStatusForDB(statusUI);  // Active / Inactive
+        String role = normalizeRoleForDB(roleUI);
+        String status = normalizeStatusForDB(statusUI);
 
-    String firstName = firstname_txt.getText().trim();
-    String lastName  = lastname_txt.getText().trim();
-    String email     = email_txt.getText().trim();
-    String contact   = contactNum_txt.getText().trim();
-    String username  = username_txt.getText().trim();
-    String password  = password_txt.getText().trim();
+        String firstName = firstname_txt.getText().trim();
+        String middleName = middlename_txt.getText().trim();
+        String lastName  = lastname_txt.getText().trim();
+        String email     = email_txt.getText().trim();
+        String contact   = contactNum_txt.getText().trim();
+        String username  = username_txt.getText().trim();
+        String password  = password_txt.getText().trim();
 
-    // MySQL DATETIME: yyyy-MM-dd HH:mm:ss
-    java.time.ZoneId ph = java.time.ZoneId.of("Asia/Manila");
-    java.time.format.DateTimeFormatter dbFmt = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    String nowDb = java.time.LocalDateTime.now(ph).format(dbFmt);
+        ZoneId ph = ZoneId.of("Asia/Manila");
+        DateTimeFormatter dbFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        String nowDb = LocalDateTime.now(ph).format(dbFmt);
 
-    try (Connection con = DBConnection.getConnection()) {
+        try (Connection con = DBConnection.getConnection()) {
 
-        if (mode == Mode.ADD) {
+            if (mode == Mode.ADD) {
 
-            if (firstName.isEmpty() || lastName.isEmpty() || username.isEmpty() || password.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Please fill in required fields (First, Last, Username, Password).");
-                return;
-            }
+                if (firstName.isEmpty() || middleName.isEmpty() || lastName.isEmpty()
+                        || username.isEmpty() || password.isEmpty()) {
+                    JOptionPane.showMessageDialog(this,
+                            "Please fill in required fields (First, Middle, Last, Username, Password).");
+                    return;
+                }
 
-            // Check duplicate username
-            String checkSql = "SELECT 1 FROM users WHERE username=? LIMIT 1";
-            try (PreparedStatement pst = con.prepareStatement(checkSql)) {
-                pst.setString(1, username);
-                try (ResultSet rs = pst.executeQuery()) {
-                    if (rs.next()) {
-                        JOptionPane.showMessageDialog(this, "Username already exists.");
-                        return;
+                if (!contact.isEmpty() && !contact.matches("^09\\d{9}$")) {
+                    JOptionPane.showMessageDialog(this,
+                            "Contact number must be a valid 11-digit Philippine mobile number.");
+                    return;
+                }
+
+                String checkSql = "SELECT 1 FROM users WHERE username=? LIMIT 1";
+                try (PreparedStatement pst = con.prepareStatement(checkSql)) {
+                    pst.setString(1, username);
+                    try (ResultSet rs = pst.executeQuery()) {
+                        if (rs.next()) {
+                            JOptionPane.showMessageDialog(this, "Username already exists.");
+                            return;
+                        }
                     }
                 }
+
+                String insertSql =
+                    "INSERT INTO users(first_name,middle_name,last_name,username,password,role,email,contact_number,status,date_created) " +
+                    "VALUES(?,?,?,?,?,?,?,?,?,?)";
+
+                String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+
+                try (PreparedStatement pst = con.prepareStatement(insertSql)) {
+                    pst.setString(1, firstName);
+                    pst.setString(2, middleName);
+                    pst.setString(3, lastName);
+                    pst.setString(4, username);
+                    pst.setString(5, hashedPassword);
+                    pst.setString(6, role);
+                    pst.setString(7, email.isEmpty() ? null : email);
+                    pst.setString(8, contact.isEmpty() ? null : contact);
+                    pst.setString(9, status);
+                    pst.setString(10, nowDb);
+                    pst.executeUpdate();
+                }
+
+                JOptionPane.showMessageDialog(this, "User Registered Successfully!");
             }
 
-            String insertSql =
-                "INSERT INTO users(first_name,last_name,username,password,role,email,contact_number,status,date_created) " +
-                "VALUES(?,?,?,?,?,?,?,?,?)";
+            else if (mode == Mode.EDIT) {
 
-            // ✅ HASH password for ADD
-            String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+                if (userId <= 0) return;
 
-            try (PreparedStatement pst = con.prepareStatement(insertSql)) {
-                pst.setString(1, firstName);
-                pst.setString(2, lastName);
-                pst.setString(3, username);
-                pst.setString(4, hashedPassword); // ✅ HASHED
-                pst.setString(5, role);
-                pst.setString(6, email.isEmpty() ? null : email);
-                pst.setString(7, contact.isEmpty() ? null : contact);
-                pst.setString(8, status);
-                pst.setString(9, nowDb);
-                pst.executeUpdate();
-            }
+                if (firstName.isEmpty() || middleName.isEmpty() || lastName.isEmpty() || username.isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "Please fill in First, Middle, Last, Username.");
+                    return;
+                }
 
-            JOptionPane.showMessageDialog(this, "User Registered Successfully!");
-        }
+                if (!contact.isEmpty() && !contact.matches("^09\\d{9}$")) {
+                    JOptionPane.showMessageDialog(this,
+                            "Contact number must be a valid 11-digit Philippine mobile number.");
+                    return;
+                }
 
-        else if (mode == Mode.EDIT) {
-
-            if (userId <= 0) return;
-
-            if (firstName.isEmpty() || lastName.isEmpty() || username.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Please fill in First, Last, Username.");
-                return;
-            }
-
-            // Check duplicate username except current user
-            String checkSql = "SELECT 1 FROM users WHERE username=? AND user_id<>? LIMIT 1";
-            try (PreparedStatement pst = con.prepareStatement(checkSql)) {
-                pst.setString(1, username);
-                pst.setInt(2, userId);
-                try (ResultSet rs = pst.executeQuery()) {
-                    if (rs.next()) {
-                        JOptionPane.showMessageDialog(this, "Username already exists.");
-                        return;
+                String checkSql = "SELECT 1 FROM users WHERE username=? AND user_id<>? LIMIT 1";
+                try (PreparedStatement pst = con.prepareStatement(checkSql)) {
+                    pst.setString(1, username);
+                    pst.setInt(2, userId);
+                    try (ResultSet rs = pst.executeQuery()) {
+                        if (rs.next()) {
+                            JOptionPane.showMessageDialog(this, "Username already exists.");
+                            return;
+                        }
                     }
                 }
+
+                String updateSql =
+                    "UPDATE users SET first_name=?, middle_name=?, last_name=?, username=?, role=?, email=?, contact_number=?, status=? " +
+                    "WHERE user_id=?";
+
+                try (PreparedStatement pst = con.prepareStatement(updateSql)) {
+                    pst.setString(1, firstName);
+                    pst.setString(2, middleName);
+                    pst.setString(3, lastName);
+                    pst.setString(4, username);
+                    pst.setString(5, role);
+                    pst.setString(6, email.isEmpty() ? null : email);
+                    pst.setString(7, contact.isEmpty() ? null : contact);
+                    pst.setString(8, status);
+                    pst.setInt(9, userId);
+                    pst.executeUpdate();
+                }
+
+                JOptionPane.showMessageDialog(this, "User Updated Successfully!");
             }
 
-            String updateSql =
-                "UPDATE users SET first_name=?, last_name=?, username=?, role=?, email=?, contact_number=?, status=? " +
-                "WHERE user_id=?";
+            else if (mode == Mode.CHANGE_PASSWORD) {
 
-            try (PreparedStatement pst = con.prepareStatement(updateSql)) {
-                pst.setString(1, firstName);
-                pst.setString(2, lastName);
-                pst.setString(3, username);
-                pst.setString(4, role);
-                pst.setString(5, email.isEmpty() ? null : email);
-                pst.setString(6, contact.isEmpty() ? null : contact);
-                pst.setString(7, status);
-                pst.setInt(8, userId);
-                pst.executeUpdate();
+                if (userId <= 0) return;
+
+                if (username.isEmpty() || password.isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "Please enter username and new password.");
+                    return;
+                }
+
+                String updateSql = "UPDATE users SET username=?, password=? WHERE user_id=?";
+
+                String newHashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+
+                try (PreparedStatement pst = con.prepareStatement(updateSql)) {
+                    pst.setString(1, username);
+                    pst.setString(2, newHashedPassword);
+                    pst.setInt(3, userId);
+                    pst.executeUpdate();
+                }
+
+                JOptionPane.showMessageDialog(this, "Password Updated Successfully!");
             }
 
-            JOptionPane.showMessageDialog(this, "User Updated Successfully!");
+            if (dashboard != null) dashboard.loadUsersToTable();
+            dispose();
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Database Error: " + e.getMessage());
+            e.printStackTrace();
         }
 
-        else if (mode == Mode.CHANGE_PASSWORD) {
-
-            if (userId <= 0) return;
-
-            if (username.isEmpty() || password.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Please enter username and new password.");
-                return;
-            }
-
-            String updateSql = "UPDATE users SET username=?, password=? WHERE user_id=?";
-
-            // ✅ HASH password for CHANGE_PASSWORD
-            String newHashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
-
-            try (PreparedStatement pst = con.prepareStatement(updateSql)) {
-                pst.setString(1, username);
-                pst.setString(2, newHashedPassword); // ✅ HASHED
-                pst.setInt(3, userId);
-                pst.executeUpdate();
-            }
-
-            JOptionPane.showMessageDialog(this, "Password Updated Successfully!");
-        }
-
-        if (dashboard != null) dashboard.loadUsersToTable();
-        dispose();
-
-    } catch (Exception e) {
-        JOptionPane.showMessageDialog(this, "Database Error: " + e.getMessage());
-        e.printStackTrace();
-    }
-}
-
-// ✅ Map UI role labels -> DB ENUM values (Admin/Cashier/Staff)
-private String normalizeRoleForDB(String roleUI) {
-    if (roleUI == null) return "Staff";
-
-    String r = roleUI.trim();
-
-    // If your UI shows "Inventory Staff", DB must store "Staff"
-    if (r.equalsIgnoreCase("Inventory Staff")) return "Staff";
-
-    // If your UI shows "Staff", keep it
-    if (r.equalsIgnoreCase("Staff")) return "Staff";
-
-    if (r.equalsIgnoreCase("Admin")) return "Admin";
-    if (r.equalsIgnoreCase("Cashier")) return "Cashier";
-
-    // Fallback (avoid enum error)
-    return "Staff";
-}
-
-// ✅ Map UI status labels -> DB ENUM values
-private String normalizeStatusForDB(String statusUI) {
-    if (statusUI == null) return "Active";
-    String s = statusUI.trim();
-
-    if (s.equalsIgnoreCase("Not Active")) return "Inactive";
-    if (s.equalsIgnoreCase("Inactive")) return "Inactive";
-    if (s.equalsIgnoreCase("Active")) return "Active";
-
-    return "Active";
     }//GEN-LAST:event_Register_btnActionPerformed
 
     
@@ -585,16 +576,18 @@ private String normalizeStatusForDB(String statusUI) {
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel11;
+    private javax.swing.JLabel jLabel12;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
     private javax.swing.JLabel jLabel8;
-    private javax.swing.JLabel jLabel9;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JTextField lastname_txt;
+    private javax.swing.JLabel lbl;
+    private javax.swing.JTextField middlename_txt;
     private javax.swing.JTextField password_txt;
     private javax.swing.JComboBox<String> role_cmb;
     private javax.swing.JComboBox<String> status_cmb;
