@@ -180,6 +180,7 @@ public class Dashboard extends javax.swing.JFrame {
         startNotifBadgeAutoRefresh();;
     
    
+        loadCategoryProductFilter();
     }
     
     
@@ -214,7 +215,7 @@ public class Dashboard extends javax.swing.JFrame {
     setupReportsPanels();
     initReportsControllers();
     
-    
+    loadCategoryProductFilter();
 
     // ✅ RBAC apply
     applyRBAC();
@@ -790,7 +791,102 @@ public void loadProductsToTable() {
 }
       
 
+     
+     
+     public void loadProductCategoriesFilter() {
+    categoryProduct_cmb.removeAllItems();
+    categoryProduct_cmb.addItem("All Categories");
 
+    String sql = "SELECT category_name FROM categories ORDER BY category_name ASC";
+
+    try (Connection con = DBConnection.getConnection();
+         PreparedStatement pst = con.prepareStatement(sql);
+         ResultSet rs = pst.executeQuery()) {
+
+        while (rs.next()) {
+            categoryProduct_cmb.addItem(rs.getString("category_name"));
+        }
+
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Error loading category filter: " + e.getMessage());
+    }
+}
+     
+     
+   
+
+     
+     public void loadCategoryProductFilter() {
+    categoryProduct_cmb.removeAllItems();
+    categoryProduct_cmb.addItem("All Categories");
+
+    String sql = "SELECT category_name FROM categories ORDER BY category_name ASC";
+
+    try (Connection con = DBConnection.getConnection();
+         PreparedStatement pst = con.prepareStatement(sql);
+         ResultSet rs = pst.executeQuery()) {
+
+        while (rs.next()) {
+            categoryProduct_cmb.addItem(rs.getString("category_name"));
+        }
+
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Error loading category filter: " + e.getMessage());
+        e.printStackTrace();
+    }
+}
+     
+     
+     public void loadProductsToTableByCategory(String categoryName) {
+    DefaultTableModel model = (DefaultTableModel) product_tbl.getModel();
+    model.setRowCount(0);
+
+    String sql =
+        "SELECT p.product_id, p.barcode, p.product_name, " +
+        "       c.category_name AS category, " +
+        "       s.supplier_name AS supplier, " +
+        "       p.unit_of_measure, p.unit_price, p.cost_price, " +
+        "       COALESCE(i.current_stock, 0) AS stock_quantity, " +
+        "       p.reorder_level, p.status, p.date_added " +
+        "FROM products p " +
+        "JOIN categories c ON p.category_id = c.category_id " +
+        "LEFT JOIN suppliers s ON p.supplier_id = s.supplier_id " +
+        "LEFT JOIN inventory i ON i.product_id = p.product_id " +
+        "WHERE c.category_name = ? " +
+        "ORDER BY p.product_id ASC";
+
+    try (Connection con = DBConnection.getConnection();
+         PreparedStatement pst = con.prepareStatement(sql)) {
+
+        pst.setString(1, categoryName);
+
+        try (ResultSet rs = pst.executeQuery()) {
+            while (rs.next()) {
+                model.addRow(new Object[]{
+                    rs.getInt("product_id"),
+                    rs.getString("barcode"),
+                    rs.getString("product_name"),
+                    rs.getString("category"),
+                    rs.getString("supplier"),
+                    rs.getString("unit_of_measure"),
+                    rs.getBigDecimal("unit_price"),
+                    rs.getBigDecimal("cost_price"),
+                    rs.getInt("stock_quantity"),
+                    rs.getInt("reorder_level"),
+                    rs.getString("status"),
+                    rs.getTimestamp("date_added")
+                });
+            }
+        }
+
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Error filtering products: " + e.getMessage());
+        e.printStackTrace();
+    }
+}
+     
+     
+    
 
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -841,7 +937,7 @@ public void loadProductsToTable() {
         search_txt = new javax.swing.JTextField();
         edit_btn = new javax.swing.JButton();
         deleteProduct_btn = new javax.swing.JButton();
-        jComboBox1 = new javax.swing.JComboBox<>();
+        categoryProduct_cmb = new javax.swing.JComboBox<>();
         jLabel33 = new javax.swing.JLabel();
         userPanel = new javax.swing.JPanel();
         jPanel4 = new javax.swing.JPanel();
@@ -1189,11 +1285,11 @@ public void loadProductsToTable() {
 
             },
             new String [] {
-                "Product ID", "Barcode", "Product Name", "Category", "Supplier", "Unit ", "Unit Price", "Cost Price", "Quantity", "Reorder Level", "Status", "Date Added"
+                "Product ID", "Barcode", "Product Name", "Category", "Supplier", "Unit ", "Unit Price", "Cost Price", "Quantity", "Reorder Level", "product_image", "Status", "Date Added"
             }
         ) {
             boolean[] canEdit = new boolean [] {
-                false, false, false, false, false, false, false, false, false, false, false, false
+                false, false, false, false, false, false, false, false, false, false, true, false, false
             };
 
             public boolean isCellEditable(int rowIndex, int columnIndex) {
@@ -1212,8 +1308,8 @@ public void loadProductsToTable() {
             product_tbl.getColumnModel().getColumn(7).setResizable(false);
             product_tbl.getColumnModel().getColumn(8).setResizable(false);
             product_tbl.getColumnModel().getColumn(9).setResizable(false);
-            product_tbl.getColumnModel().getColumn(10).setResizable(false);
             product_tbl.getColumnModel().getColumn(11).setResizable(false);
+            product_tbl.getColumnModel().getColumn(12).setResizable(false);
         }
 
         jPanel2.add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 50, 1320, 410));
@@ -1232,7 +1328,7 @@ public void loadProductsToTable() {
         jLabel1.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jLabel1.setForeground(new java.awt.Color(0, 0, 0));
         jLabel1.setText("Category:");
-        jPanel2.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(380, 0, 60, 50));
+        jPanel2.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(350, 0, 60, 50));
 
         search_txt.setBackground(new java.awt.Color(255, 255, 255));
         jPanel2.add(search_txt, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 10, 250, 30));
@@ -1255,8 +1351,13 @@ public void loadProductsToTable() {
         });
         jPanel2.add(deleteProduct_btn, new org.netbeans.lib.awtextra.AbsoluteConstraints(1200, 10, 130, 30));
 
-        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
-        jPanel2.add(jComboBox1, new org.netbeans.lib.awtextra.AbsoluteConstraints(450, 10, 220, 30));
+        categoryProduct_cmb.setBackground(new java.awt.Color(255, 255, 255));
+        categoryProduct_cmb.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                categoryProduct_cmbActionPerformed(evt);
+            }
+        });
+        jPanel2.add(categoryProduct_cmb, new org.netbeans.lib.awtextra.AbsoluteConstraints(420, 10, 220, 30));
 
         jLabel33.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
         jLabel33.setForeground(new java.awt.Color(0, 0, 0));
@@ -2155,7 +2256,7 @@ if (choice == JOptionPane.YES_OPTION) {
 
     private void edit_btnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_edit_btnActionPerformed
         // TODO add your handling code here:
-        if (!RBAC.canAccess(userRole, RBAC.Feature.PRODUCTS_WRITE)) {
+         if (!RBAC.canAccess(userRole, RBAC.Feature.PRODUCTS_WRITE)) {
         JOptionPane.showMessageDialog(this, "Access denied.");
         return;
     }
@@ -2170,16 +2271,17 @@ if (choice == JOptionPane.YES_OPTION) {
 
     String barcode   = String.valueOf(product_tbl.getValueAt(row, 1));
     String name      = String.valueOf(product_tbl.getValueAt(row, 2));
-    String category  = String.valueOf(product_tbl.getValueAt(row, 3)); // category_name
-    String unit      = String.valueOf(product_tbl.getValueAt(row, 4));
-    String unitPrice = String.valueOf(product_tbl.getValueAt(row, 5));
-    String costPrice = String.valueOf(product_tbl.getValueAt(row, 6));
-    String qty       = String.valueOf(product_tbl.getValueAt(row, 7));
-    String reorder   = String.valueOf(product_tbl.getValueAt(row, 8));
-    String status    = String.valueOf(product_tbl.getValueAt(row, 9));
+    String category  = String.valueOf(product_tbl.getValueAt(row, 3));
+    String supplier  = String.valueOf(product_tbl.getValueAt(row, 4));
+    String unit      = String.valueOf(product_tbl.getValueAt(row, 5));
+    String unitPrice = String.valueOf(product_tbl.getValueAt(row, 6));
+    String costPrice = String.valueOf(product_tbl.getValueAt(row, 7));
+    String qty       = String.valueOf(product_tbl.getValueAt(row, 8));
+    String reorder   = String.valueOf(product_tbl.getValueAt(row, 9));
+    String status    = String.valueOf(product_tbl.getValueAt(row, 10));
 
     addProduct frm = new addProduct(this);
-    frm.setEditMode(productId, name, category, barcode, unitPrice, costPrice, qty, reorder, unit, status);
+    frm.setEditMode(productId, name, category, supplier, barcode, unitPrice, costPrice, qty, reorder, unit, status);
     frm.setLocationRelativeTo(this);
     frm.setVisible(true);
     }//GEN-LAST:event_edit_btnActionPerformed
@@ -2407,7 +2509,74 @@ pop.show(navMenu, 0, navMenu.getHeight());
 
     private void deleteProduct_btnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteProduct_btnActionPerformed
         // TODO add your handling code here:
+        
+    int row = product_tbl.getSelectedRow();
+
+    if (row == -1) {
+        JOptionPane.showMessageDialog(this, "Please select a product to delete.");
+        return;
+    }
+
+    int confirm = JOptionPane.showConfirmDialog(
+            this,
+            "Are you sure you want to delete this product?",
+            "Confirm Delete",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE
+    );
+
+    if (confirm != JOptionPane.YES_OPTION) {
+        return;
+    }
+
+    int productId = Integer.parseInt(product_tbl.getValueAt(row, 0).toString());
+    String productName = product_tbl.getValueAt(row, 2).toString();
+
+    try (Connection con = DBConnection.getConnection()) {
+
+        con.setAutoCommit(false);
+
+        // delete inventory record first
+        String invSql = "DELETE FROM inventory WHERE product_id=?";
+        try (PreparedStatement inv = con.prepareStatement(invSql)) {
+            inv.setInt(1, productId);
+            inv.executeUpdate();
+        }
+
+        // delete product
+        String prodSql = "DELETE FROM products WHERE product_id=?";
+        try (PreparedStatement pst = con.prepareStatement(prodSql)) {
+            pst.setInt(1, productId);
+            pst.executeUpdate();
+        }
+
+        con.commit();
+
+        JOptionPane.showMessageDialog(this, "Product \"" + productName + "\" deleted successfully.");
+
+        loadProductsToTable();      // refresh product table
+        loadInventoryToTable();     // refresh inventory table if you have it
+
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Error deleting product: " + e.getMessage());
+        e.printStackTrace();
+    }
     }//GEN-LAST:event_deleteProduct_btnActionPerformed
+
+    private void categoryProduct_cmbActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_categoryProduct_cmbActionPerformed
+        // TODO add your handling code here:
+        Object selected = categoryProduct_cmb.getSelectedItem();
+
+    if (selected == null) return;
+
+    String category = selected.toString();
+
+    if (category.equals("All Categories")) {
+        loadProductsToTable();
+    } else {
+        loadProductsToTableByCategory(category);
+    }
+    }//GEN-LAST:event_categoryProduct_cmbActionPerformed
 
     
     
@@ -2458,6 +2627,7 @@ pop.show(navMenu, 0, navMenu.getHeight());
     private javax.swing.JButton adjustStock_btn;
     private javax.swing.JComboBox<String> categoryLowStock_cmb;
     private javax.swing.JComboBox<String> categoryMovement_cmb;
+    private javax.swing.JComboBox<String> categoryProduct_cmb;
     private javax.swing.JButton changePass_btn;
     private javax.swing.JPanel dashboardNav;
     private javax.swing.JButton deleteProduct_btn;
@@ -2472,7 +2642,6 @@ pop.show(navMenu, 0, navMenu.getHeight());
     private javax.swing.JButton inventoryStatus_btn;
     private javax.swing.JTable inventoryStatus_tbl;
     private javax.swing.JTable inventory_tbl;
-    private javax.swing.JComboBox<String> jComboBox1;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel11;

@@ -12,6 +12,20 @@ import java.sql.*;
 import java.text.DecimalFormat;
 
 
+import java.awt.Image;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.Base64;
+import java.util.Random;
+import javax.imageio.ImageIO;
+import javax.swing.table.DefaultTableModel;
+
+import java.io.ByteArrayInputStream;
+
+
+
+
 
 public class addProduct extends javax.swing.JFrame {
     
@@ -22,6 +36,13 @@ public class addProduct extends javax.swing.JFrame {
     private final Dashboard dashboard;   // ✅ to refresh JTable
     private boolean editMode = false;
     private Integer editingProductId = null;
+    
+    private String selectedImageBase64 = null;
+    private File selectedImageFile = null;
+    private final Random random = new Random();
+  
+   
+   
 
     
     public addProduct() {
@@ -35,6 +56,7 @@ public class addProduct extends javax.swing.JFrame {
         update_btn.setEnabled(false); // ✅ disabled by default
         loadCategoriesFromDB(); // ✅ combo from DB
         loadSuppliersFromDB();
+        setupAutoBarcode();
 
     }
 
@@ -113,18 +135,19 @@ public class addProduct extends javax.swing.JFrame {
     return null;
 }
     
-    public void setEditMode(int productId, String name, String categoryName, String barcode,
-                        String unitPrice, String costPrice, String qty, String reorder,
-                        String unit, String status) {
+    public void setEditMode(int productId, String name, String categoryName, String supplierName,
+                        String barcode, String unitPrice, String costPrice, String qty,
+                        String reorder, String unit, String status) {
 
     this.editMode = true;
     this.editingProductId = productId;
 
-    add_btn.setEnabled(false);      // optional
-    update_btn.setEnabled(true);    // ✅ enable update only in edit mode
+    add_btn.setEnabled(false);
+    update_btn.setEnabled(true);
 
     productName_txt.setText(name);
     category_cmb.setSelectedItem(categoryName);
+    supplier_cmb.setSelectedItem(supplierName);
     barcode_txt.setText(barcode);
     unitPrice_txt.setText(unitPrice);
     costPrice_txt.setText(costPrice);
@@ -132,8 +155,7 @@ public class addProduct extends javax.swing.JFrame {
     reorderLevel_txt.setText(reorder);
     unitMeasure_cmb.setSelectedItem(unit);
     status_cmb.setSelectedItem(status);
-
-    // Date (optional): you can keep whatever selected, or leave
+    loadProductImageFromDB(productId);
 }
     
     
@@ -157,7 +179,9 @@ private Double parseDoubleField(String label, JTextField tf) {
     }
 }
 
-private boolean validateForm() {
+    
+
+    private boolean validateForm() {
     if (isBlank(productName_txt.getText())) {
         JOptionPane.showMessageDialog(this, "Product Name is required.");
         productName_txt.requestFocus();
@@ -170,22 +194,42 @@ private boolean validateForm() {
         return false;
     }
 
+    if (supplier_cmb.getSelectedIndex() <= 0) {
+        JOptionPane.showMessageDialog(this, "Please select a Supplier.");
+        supplier_cmb.requestFocus();
+        return false;
+    }
+
     if (isBlank(barcode_txt.getText())) {
         JOptionPane.showMessageDialog(this, "Barcode is required.");
         barcode_txt.requestFocus();
         return false;
     }
 
-    if (parseDoubleField("Unit Price", unitPrice_txt) == null) return false;
+    if (isBarcodeDuplicate(barcode_txt.getText().trim(), editMode ? editingProductId : null)) {
+        JOptionPane.showMessageDialog(this, "Barcode already exists. Please use a unique barcode.");
+        barcode_txt.requestFocus();
+        return false;
+    }
+
+    if (parseDoubleField("Selling Price", unitPrice_txt) == null) return false;
     if (parseDoubleField("Cost Price", costPrice_txt) == null) return false;
 
     Integer qty = parseIntField("Stock Quantity", quantity_txt);
     if (qty == null) return false;
-    if (qty < 0) { JOptionPane.showMessageDialog(this, "Quantity cannot be negative."); return false; }
+    if (qty < 0) {
+        JOptionPane.showMessageDialog(this, "Quantity cannot be negative.");
+        quantity_txt.requestFocus();
+        return false;
+    }
 
     Integer reorder = parseIntField("Reorder Level", reorderLevel_txt);
     if (reorder == null) return false;
-    if (reorder < 0) { JOptionPane.showMessageDialog(this, "Reorder Level cannot be negative."); return false; }
+    if (reorder < 0) {
+        JOptionPane.showMessageDialog(this, "Reorder Level cannot be negative.");
+        reorderLevel_txt.requestFocus();
+        return false;
+    }
 
     if (unitMeasure_cmb.getSelectedItem() == null) {
         JOptionPane.showMessageDialog(this, "Please select Unit.");
@@ -201,9 +245,136 @@ private boolean validateForm() {
 }
 
 
+     private void setImagePreview(File file) {
+    try {
+        Image img = ImageIO.read(file);
+        if (img != null) {
+            Image scaled = img.getScaledInstance(
+                image_lbl.getWidth(),
+                image_lbl.getHeight(),
+                Image.SCALE_SMOOTH
+            );
+            image_lbl.setIcon(new ImageIcon(scaled));
+            image_lbl.setText("");
+        }
+    } catch (IOException e) {
+        JOptionPane.showMessageDialog(this, "Error previewing image: " + e.getMessage());
+    }
+}
+
+private String encodeImageToBase64(File file) throws IOException {
+    byte[] fileContent = Files.readAllBytes(file.toPath());
+    return Base64.getEncoder().encodeToString(fileContent);
+}
+   
+
+    private void clearImage() {
+    selectedImageFile = null;
+    selectedImageBase64 = null;
+    image_lbl.setIcon(null);
+    image_lbl.setText("");
+}
+    
+    
+    private boolean isBarcodeDuplicate(String barcode, Integer excludeProductId) {
+    String sql;
+
+    if (excludeProductId == null) {
+        sql = "SELECT product_id FROM products WHERE barcode = ? LIMIT 1";
+    } else {
+        sql = "SELECT product_id FROM products WHERE barcode = ? AND product_id <> ? LIMIT 1";
+    }
+
+    try (Connection con = DBConnection.getConnection();
+         PreparedStatement pst = con.prepareStatement(sql)) {
+
+        pst.setString(1, barcode);
+
+        if (excludeProductId != null) {
+            pst.setInt(2, excludeProductId);
+        }
+
+        try (ResultSet rs = pst.executeQuery()) {
+            return rs.next();
+        }
+
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Barcode check error: " + e.getMessage());
+        e.printStackTrace();
+    }
+
+    return true;
+}
+    
+    
+    private String generateUniqueBarcode() {
+    String barcode;
+    do {
+        barcode = String.valueOf(10000 + random.nextInt(900000));
+    } while (isBarcodeDuplicate(barcode, editMode ? editingProductId : null));
+    return barcode;
+}
+    
+    private void setupAutoBarcode() {
+    autoGenerateBarcode_rbt.addActionListener(evt -> {
+        if (autoGenerateBarcode_rbt.isSelected()) {
+            String generated = generateUniqueBarcode();
+            barcode_txt.setText(generated);
+            barcode_txt.setEditable(false);
+        } else {
+            barcode_txt.setText("");
+            barcode_txt.setEditable(true);
+            barcode_txt.requestFocus();
+        }
+    });
+}
 
 
 
+    private void loadProductImageFromDB(int productId) {
+    String sql = "SELECT product_image FROM products WHERE product_id = ? LIMIT 1";
+
+    try (Connection con = DBConnection.getConnection();
+         PreparedStatement pst = con.prepareStatement(sql)) {
+
+        pst.setInt(1, productId);
+
+        try (ResultSet rs = pst.executeQuery()) {
+            if (rs.next()) {
+                String base64 = rs.getString("product_image");
+
+                if (base64 != null && !base64.trim().isEmpty()) {
+                    byte[] imageBytes = Base64.getDecoder().decode(base64);
+                    ByteArrayInputStream bis = new ByteArrayInputStream(imageBytes);
+                    Image img = ImageIO.read(bis);
+
+                    if (img != null) {
+                        Image scaled = img.getScaledInstance(
+                            image_lbl.getWidth(),
+                            image_lbl.getHeight(),
+                            Image.SCALE_SMOOTH
+                        );
+                        image_lbl.setIcon(new ImageIcon(scaled));
+                        image_lbl.setText("");
+                        selectedImageBase64 = base64;
+                    } else {
+                        image_lbl.setIcon(null);
+                        image_lbl.setText("");
+                    }
+                } else {
+                    image_lbl.setIcon(null);
+                    image_lbl.setText("");
+                    selectedImageBase64 = null;
+                }
+            }
+        }
+
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Error loading product image: " + e.getMessage());
+        e.printStackTrace();
+    }
+}
+    
    
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -500,12 +671,12 @@ private boolean validateForm() {
 
     // ⭐ SQL MUST BE STRING
     String sql =
-        "INSERT INTO products (" +
-        "product_name, description, category_id, supplier_id, " +
-        "barcode, unit_price, cost_price, " +
-        "stock_quantity, reorder_level, " +
-        "unit_of_measure, status, date_added) " +
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    "INSERT INTO products (" +
+    "product_name, description, category_id, supplier_id, " +
+    "barcode, unit_price, cost_price, " +
+    "stock_quantity, reorder_level, product_image, " +
+    "unit_of_measure, status, date_added) " +
+    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     try (Connection con = DBConnection.getConnection()) {
 
@@ -519,15 +690,16 @@ private boolean validateForm() {
             pst.setString(1, name);
             pst.setString(2, desc);
             pst.setInt(3, categoryId);
-            pst.setInt(4, supplierId);     // ⭐ NEW
+            pst.setInt(4, supplierId);
             pst.setString(5, barcode);
             pst.setDouble(6, unitPrice);
             pst.setDouble(7, costPrice);
             pst.setInt(8, qty);
             pst.setInt(9, reorder);
-            pst.setString(10, unit);
-            pst.setString(11, status);
-            pst.setTimestamp(12, dateAdded);
+            pst.setString(10, selectedImageBase64); // image
+            pst.setString(11, unit);
+            pst.setString(12, status);
+            pst.setTimestamp(13, dateAdded);
 
             int rows = pst.executeUpdate();
 
@@ -626,10 +798,10 @@ private boolean validateForm() {
 
     // ===== SQL =====
     String prodSql =
-        "UPDATE products SET " +
-        "product_name=?, description=?, category_id=?, supplier_id=?, barcode=?, unit_price=?, cost_price=?, " +
-        "stock_quantity=?, reorder_level=?, unit_of_measure=?, status=? " +
-        "WHERE product_id=?";
+    "UPDATE products SET " +
+    "product_name=?, description=?, category_id=?, supplier_id=?, barcode=?, unit_price=?, cost_price=?, " +
+    "stock_quantity=?, reorder_level=?, product_image=?, unit_of_measure=?, status=? " +
+    "WHERE product_id=?";
 
     String invUpdate =
         "UPDATE inventory SET quantity_in=?, quantity_out=0, current_stock=?, last_updated=NOW() " +
@@ -650,15 +822,16 @@ private boolean validateForm() {
             pst.setString(1, name);
             pst.setString(2, desc);
             pst.setInt(3, categoryId);
-            pst.setInt(4, supplierId);   // ⭐ NEW SUPPLIER
+            pst.setInt(4, supplierId);
             pst.setString(5, barcode);
             pst.setDouble(6, unitPrice);
             pst.setDouble(7, costPrice);
             pst.setInt(8, qty);
             pst.setInt(9, reorder);
-            pst.setString(10, unit);
-            pst.setString(11, status);
-            pst.setInt(12, editingProductId);
+            pst.setString(10, selectedImageBase64);
+            pst.setString(11, unit);
+            pst.setString(12, status);
+            pst.setInt(13, editingProductId);
 
             prodRows = pst.executeUpdate();
         }
@@ -709,7 +882,7 @@ private boolean validateForm() {
 
     private void clear_btnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_clear_btnActionPerformed
         // TODO add your handling code here:
-        productName_txt.setText("");
+         productName_txt.setText("");
     description_txt.setText("");
     barcode_txt.setText("");
     unitPrice_txt.setText("");
@@ -718,9 +891,14 @@ private boolean validateForm() {
     reorderLevel_txt.setText("");
 
     category_cmb.setSelectedIndex(0);
+    supplier_cmb.setSelectedIndex(0);
     unitMeasure_cmb.setSelectedIndex(0);
     status_cmb.setSelectedIndex(0);
-    dateAdded_txt.setDate(null); // JDateChooser
+    dateAdded_txt.setDate(null);
+
+    clearImage();
+    autoGenerateBarcode_rbt.setSelected(false);
+    barcode_txt.setEditable(true);
     }//GEN-LAST:event_clear_btnActionPerformed
 
     private void exit_btnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_exit_btnActionPerformed
@@ -737,10 +915,26 @@ private boolean validateForm() {
 
     private void RemoveImage_btnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RemoveImage_btnActionPerformed
         // TODO add your handling code here:
+        clearImage();
     }//GEN-LAST:event_RemoveImage_btnActionPerformed
 
     private void chooseImage_btnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chooseImage_btnActionPerformed
         // TODO add your handling code here:
+         JFileChooser chooser = new JFileChooser();
+    chooser.setDialogTitle("Choose Product Image");
+
+    int result = chooser.showOpenDialog(this);
+    if (result == JFileChooser.APPROVE_OPTION) {
+        File file = chooser.getSelectedFile();
+
+        try {
+            selectedImageBase64 = encodeImageToBase64(file);
+            selectedImageFile = file;
+            setImagePreview(file);
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, "Error loading image: " + e.getMessage());
+        }
+    }
     }//GEN-LAST:event_chooseImage_btnActionPerformed
 
     
